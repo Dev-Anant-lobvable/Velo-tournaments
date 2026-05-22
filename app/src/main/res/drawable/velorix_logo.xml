@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <!-- Outer sharp tribal elements -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,100 L40,80 L60,95 L40,110 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M185,100 L160,80 L140,95 L160,110 Z" />
+    <!-- V Shape with grunge/gothic cuts -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,50 L100,160 L130,50 L110,50 L100,100 L90,50 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,150 L65,140 L70,160 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M150,150 L135,140 L130,160 Z" />
+</vector>
