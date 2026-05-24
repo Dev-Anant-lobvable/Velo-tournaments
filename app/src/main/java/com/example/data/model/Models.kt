@@ -2,8 +2,10 @@ package com.example.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 import java.util.UUID
 
+@Serializable
 @Entity(tableName = "tournaments")
 data class Tournament(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
@@ -23,16 +25,18 @@ data class Tournament(
         get() = filledSlots >= maxSlots
 }
 
+@Serializable
 @Entity(tableName = "transactions")
 data class Transaction(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val type: String, // "ADD_FUNDS", "WITHDRAWAL", "ENTRY_FEE", "WINNINGS"
     val amount: Double,
     val detail: String, // e.g. "BGMI Solo Battle Royale Entry" or "Withdrawn to UPI"
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = 0, // Using default of 0 as System.currentTimeMillis() requires custom serializer, though we can just not rely on it in default
     val isPositive: Boolean
 )
 
+@Serializable
 @Entity(tableName = "users")
 data class User(
     @PrimaryKey val id: Int = 0,
@@ -42,6 +46,7 @@ data class User(
     val avatarIdx: Int = 2
 )
 
+@Serializable
 @Entity(tableName = "leaderboard")
 data class LeaderboardPlayer(
     @PrimaryKey val rank: Int,

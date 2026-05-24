@@ -41,7 +41,7 @@ fun SplashScreen(
     
     // Progress bar animation
     val progressAnim by infiniteTransition.animateFloat(
-        initialValue = 0f,
+        initialValue = 0.01f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(2500, easing = LinearEasing)
@@ -78,65 +78,87 @@ fun SplashScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(bottom = 64.dp) // shift content up a bit to match optical center
         ) {
-            // Glowing Circle border containing the logo
+            // Glowing concentric circles around the core logo
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(110.dp)
-                    .border(1.dp, velorixRed.copy(alpha = 0.5f), CircleShape)
-                    .padding(8.dp)
-                    .border(1.dp, velorixRed, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color.Black)
+                modifier = Modifier.size(140.dp)
             ) {
-                // We use a placeholder image for the user's logo attachment (2nd image)
-                // The user will replace this in the res/drawable folder
-                Image(
-                    painter = painterResource(id = R.drawable.velorix_logo), // The user generated app logo
-                    contentDescription = "Velorix App Logo",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                // Outer faint glow
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(1.dp, velorixRed.copy(alpha = 0.05f), CircleShape)
                 )
+                
+                // Mid glow
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .border(1.dp, velorixRed.copy(alpha = 0.15f), CircleShape)
+                )
+
+                // Inner core logo container
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .border(1.dp, velorixRed.copy(alpha = 0.8f), CircleShape)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0F0004)) // Pitch black with slight red tint
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.velorix_logo), 
+                        contentDescription = "Velorix Core Logo",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Brand Text Header with paired typographic accents
+            // VELORIX Text
             Text(
-                text = "VELORIX",
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 6.sp,
-                    color = velorixRed
+                text = "V E L O R I X",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 2.sp,
+                    color = Color(0xFFF91E4E) // A slightly brighter, more fluorescent red as seen in screenshot
                 )
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
+            // LOADING Text
             Text(
                 text = "LOADING THE ARENA",
                 style = MaterialTheme.typography.labelSmall.copy(
-                    color = velorixRed.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Light,
                     letterSpacing = 4.sp,
+                    color = Color(0xFFF91E4E).copy(alpha = 0.6f),
+                    fontSize = 9.sp
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Small glowing loading bar
+            // Loading bar
             Box(
                 modifier = Modifier
-                    .width(60.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(velorixRed.copy(alpha = 0.3f))
+                    .width(80.dp)
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(Color(0xFFF91E4E).copy(alpha = 0.2f))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(fraction = progressAnim)
                         .fillMaxHeight()
-                        .background(velorixRed)
+                        .background(Color(0xFFF91E4E))
                 )
             }
         }

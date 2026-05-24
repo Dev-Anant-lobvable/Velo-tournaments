@@ -96,7 +96,9 @@ class MainActivity : ComponentActivity() {
                     // 3. MAIN PORTAL HUB WITH TRANSLUCENT BOTTOM NAVIGATION
                     composable("main") {
                         Scaffold(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .statusBarsPadding(),
                             containerColor = DeepSpaceBlack,
                             bottomBar = {
                                 // High-fidelity frosted glass cyberpunk bottom bar
@@ -207,7 +209,10 @@ class MainActivity : ComponentActivity() {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(bottom = innerPadding.calculateBottomPadding())
+                                    .padding(
+                                        top = innerPadding.calculateTopPadding(),
+                                        bottom = innerPadding.calculateBottomPadding()
+                                    )
                             ) {
                                 when (currentTabState) {
                                     "home" -> {

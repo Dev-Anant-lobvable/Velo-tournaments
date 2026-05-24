@@ -1,24 +1,54 @@
 package com.example.data.repository
 
+import android.util.Log
+import com.example.data.SupabaseClient
 import com.example.data.local.TournamentDao
 import com.example.data.model.LeaderboardPlayer
 import com.example.data.model.Tournament
 import com.example.data.model.Transaction
 import com.example.data.model.User
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flow
 
 class PlatformRepository(private val dao: TournamentDao) {
 
-    val user: Flow<User?> = dao.getUser()
-    val tournaments: Flow<List<Tournament>> = dao.getAllTournaments()
-    val transactions: Flow<List<Transaction>> = dao.getAllTransactions()
-    val leaderboard: Flow<List<LeaderboardPlayer>> = dao.getLeaderboard()
+    private val _user = MutableStateFlow<User?>(null)
+    val user: Flow<User?> = _user.asStateFlow()
 
-    fun getTournamentById(id: String): Flow<Tournament?> = dao.getTournamentById(id)
+    private val _tournaments = MutableStateFlow<List<Tournament>>(emptyList())
+    val tournaments: Flow<List<Tournament>> = _tournaments.asStateFlow()
+
+    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    val transactions: Flow<List<Transaction>> = _transactions.asStateFlow()
+
+    private val _leaderboard = MutableStateFlow<List<LeaderboardPlayer>>(emptyList())
+    val leaderboard: Flow<List<LeaderboardPlayer>> = _leaderboard.asStateFlow()
+
+    fun getTournamentById(id: String): Flow<Tournament?> {
+        val flow = MutableStateFlow<Tournament?>(null)
+        // Just return from memory
+        flow.value = _tournaments.value.find { it.id == id }
+        return flow.asStateFlow()
+    }
+
 
     suspend fun seedDatabase() {
+        try {
+            // Attempt to fetch from real database
+            _tournaments.value = SupabaseClient.client.postgrest["tournaments"].select().decodeList<Tournament>()
+            _user.value = SupabaseClient.client.postgrest["users"].select().decodeList<User>().firstOrNull()
+            _transactions.value = SupabaseClient.client.postgrest["transactions"].select().decodeList<Transaction>()
+            _leaderboard.value = SupabaseClient.client.postgrest["leaderboard"].select().decodeList<LeaderboardPlayer>()
+        } catch (e: Exception) {
+            Log.e("Supabase", "Failed to fetch from remote DB. Falling back to local offline DB.", e)
+            fetchLocalOfflineFallback()
+        }
+    }
+
+    private suspend fun fetchLocalOfflineFallback() {
         // Only seed if user or tournaments don't exist yet
         val currentUser = dao.getUser().firstOrNull()
         if (currentUser == null) {
@@ -133,88 +163,116 @@ class PlatformRepository(private val dao: TournamentDao) {
             )
             dao.insertLeaderboard(players)
         }
+
+        // Output local values
+        _user.value = dao.getUser().firstOrNull()
+        _tournaments.value = dao.getAllTournaments().firstOrNull() ?: emptyList()
+        _transactions.value = dao.getAllTransactions().firstOrNull() ?: emptyList()
+        _leaderboard.value = dao.getLeaderboard().firstOrNull() ?: emptyList()
     }
 
     suspend fun joinTournament(tournamentId: String): JoinResult {
-        val userItem = dao.getUser().firstOrNull() ?: return JoinResult.Failure("User not found")
-        val match = dao.getAllTournaments().firstOrNull()?.find { it.id == tournamentId } 
+        // Fallback to local user if remote hasn't loaded yet?
+        val userItem = _user.value ?: return JoinResult.Failure("User not found")
+        val match = _tournaments.value.find { it.id == tournamentId } 
             ?: return JoinResult.Failure("Tournament not found")
 
-        if (match.joined) {
-            return JoinResult.Failure("Already joined this tournament")
-        }
-        if (match.isFull) {
-            return JoinResult.Failure("Tournament is full")
-        }
-        if (userItem.balance < match.entryFee) {
-            return JoinResult.Failure("Insufficient wallet balance. Please add funds!")
-        }
+        if (match.joined) return JoinResult.Failure("Already joined this tournament")
+        if (match.isFull) return JoinResult.Failure("Tournament is full")
+        if (userItem.balance < match.entryFee) return JoinResult.Failure("Insufficient balance. Please add funds!")
 
-        // Deduct money & increase slots, mark joined
         val updatedUser = userItem.copy(balance = userItem.balance - match.entryFee)
-        dao.updateUser(updatedUser)
-
         val updatedMatch = match.copy(joined = true, filledSlots = match.filledSlots + 1)
-        dao.updateTournament(updatedMatch)
+        val newTx = Transaction(type = "ENTRY_FEE", amount = match.entryFee, detail = "Joined ${match.game}: ${match.title}", isPositive = false)
 
-        // Add to transactions
-        dao.insertTransaction(
-            Transaction(
-                type = "ENTRY_FEE",
-                amount = match.entryFee,
-                detail = "Joined ${match.game}: ${match.title}",
-                isPositive = false
-            )
-        )
+        try {
+            // Push to Supabase
+            SupabaseClient.client.postgrest["users"].update(updatedUser) { filter { eq("id", updatedUser.id) } }
+            SupabaseClient.client.postgrest["tournaments"].update(updatedMatch) { filter { eq("id", updatedMatch.id) } }
+            SupabaseClient.client.postgrest["transactions"].insert(newTx)
+            // Update local memory
+            _user.value = updatedUser
+            _tournaments.value = _tournaments.value.map { if (it.id == updatedMatch.id) updatedMatch else it }
+            _transactions.value = _transactions.value + newTx
+            // Update local DB for offline access
+            dao.updateUser(updatedUser)
+            dao.updateTournament(updatedMatch)
+            dao.insertTransaction(newTx)
+        } catch (e: Exception) {
+            Log.e("Supabase", "Supabase sync failed. Operating locally.", e)
+            dao.updateUser(updatedUser)
+            dao.updateTournament(updatedMatch)
+            dao.insertTransaction(newTx)
+            _user.value = updatedUser
+            _tournaments.value = _tournaments.value.map { if (it.id == updatedMatch.id) updatedMatch else it }
+            _transactions.value = _transactions.value + newTx
+        }
 
         return JoinResult.Success("Successfully registered for ${match.title}! Room ID will be shared 15 mins before match.")
     }
 
     suspend fun addFunds(amount: Double) {
-        val userItem = dao.getUser().firstOrNull() ?: return
+        val userItem = _user.value ?: return
         val updatedUser = userItem.copy(balance = userItem.balance + amount)
-        dao.updateUser(updatedUser)
+        val newTx = Transaction(type = "ADD_FUNDS", amount = amount, detail = "Added funds to Wallet via UPI", isPositive = true)
 
-        dao.insertTransaction(
-            Transaction(
-                type = "ADD_FUNDS",
-                amount = amount,
-                detail = "Added funds to Wallet via UPI",
-                isPositive = true
-            )
-        )
+        try {
+            SupabaseClient.client.postgrest["users"].update(updatedUser) { filter { eq("id", updatedUser.id) } }
+            SupabaseClient.client.postgrest["transactions"].insert(newTx)
+            
+            _user.value = updatedUser
+            _transactions.value = _transactions.value + newTx
+            
+            dao.updateUser(updatedUser)
+            dao.insertTransaction(newTx)
+        } catch (e: Exception) {
+            dao.updateUser(updatedUser)
+            dao.insertTransaction(newTx)
+            _user.value = updatedUser
+            _transactions.value = _transactions.value + newTx
+        }
     }
 
     suspend fun withdrawFunds(amount: Double): WithdrawResult {
-        val userItem = dao.getUser().firstOrNull() ?: return WithdrawResult.Failure("User info missing")
-        if (amount <= 0) {
-            return WithdrawResult.Failure("Amount must be greater than zero")
-        }
-        if (userItem.balance < amount) {
-            return WithdrawResult.Failure("Insufficient balance to execute withdrawal")
-        }
+        val userItem = _user.value ?: return WithdrawResult.Failure("User info missing")
+        if (amount <= 0) return WithdrawResult.Failure("Amount must be greater than zero")
+        if (userItem.balance < amount) return WithdrawResult.Failure("Insufficient balance")
 
         val updatedUser = userItem.copy(balance = userItem.balance - amount)
-        dao.updateUser(updatedUser)
+        val newTx = Transaction(type = "WITHDRAWAL", amount = amount, detail = "Withdrawn to linked UPI / Bank Account", isPositive = false)
 
-        dao.insertTransaction(
-            Transaction(
-                type = "WITHDRAWAL",
-                amount = amount,
-                detail = "Withdrawn to linked UPI / Bank Account",
-                isPositive = false
-            )
-        )
-
+        try {
+            SupabaseClient.client.postgrest["users"].update(updatedUser) { filter { eq("id", updatedUser.id) } }
+            SupabaseClient.client.postgrest["transactions"].insert(newTx)
+            _user.value = updatedUser
+            _transactions.value = _transactions.value + newTx
+            dao.updateUser(updatedUser)
+            dao.insertTransaction(newTx)
+        } catch (e: Exception) {
+            dao.updateUser(updatedUser)
+            dao.insertTransaction(newTx)
+            _user.value = updatedUser
+            _transactions.value = _transactions.value + newTx
+        }
         return WithdrawResult.Success("Withdrawal of ₹$amount initiated successfully. Funds will reflect in 4 hours!")
     }
 
     suspend fun saveUserProfile(username: String, phoneOrEmail: String) {
-        val currentUser = dao.getUser().firstOrNull()
-        if (currentUser != null) {
-            dao.updateUser(currentUser.copy(username = username, phoneOrEmail = phoneOrEmail))
-        } else {
-            dao.insertUser(User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2))
+        val currentUser = _user.value
+        val newUser = currentUser?.copy(username = username, phoneOrEmail = phoneOrEmail) 
+            ?: User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2)
+            
+        try {
+            if (currentUser != null) {
+                SupabaseClient.client.postgrest["users"].update(newUser) { filter { eq("id", newUser.id) } }
+            } else {
+                SupabaseClient.client.postgrest["users"].insert(newUser)
+            }
+            _user.value = newUser
+            if (currentUser != null) dao.updateUser(newUser) else dao.insertUser(newUser)
+        } catch (e: Exception) {
+            _user.value = newUser
+            if (currentUser != null) dao.updateUser(newUser) else dao.insertUser(newUser)
         }
     }
 }

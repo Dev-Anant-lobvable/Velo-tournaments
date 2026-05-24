@@ -51,6 +51,7 @@ fun AuthScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DeepSpaceBlack)
+            .systemBarsPadding()
             .verticalScroll(scrollState)
             .padding(24.dp),
         contentAlignment = Alignment.Center
