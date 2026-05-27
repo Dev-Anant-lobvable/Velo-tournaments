@@ -13,10 +13,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CallMade
+import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CallReceived
-import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -73,14 +73,21 @@ fun WalletScreen(viewModel: PlatformViewModel) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    Text(
-                        text = "FUNDS MANAGER",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            color = ElectricBlue,
-                            letterSpacing = 2.sp,
-                            fontWeight = FontWeight.Bold
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.velorix_logo_image),
+                            contentDescription = "Logo",
+                            modifier = Modifier.size(36.dp).padding(end = 6.dp)
                         )
-                    )
+                        Text(
+                            text = "FUNDS MANAGER",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = ElectricBlue,
+                                letterSpacing = 2.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
                     Text(
                         text = "MY WALLET",
                         style = MaterialTheme.typography.displayLarge.copy(
@@ -384,7 +391,7 @@ fun TransactionRow(tx: Transaction) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (tx.isPositive) Icons.Default.CallReceived else Icons.Default.CallMade,
+                        imageVector = if (tx.isPositive) Icons.AutoMirrored.Filled.CallReceived else Icons.AutoMirrored.Filled.CallMade,
                         contentDescription = null,
                         tint = if (tx.isPositive) NeonGreen else NeonRed,
                         modifier = Modifier.size(20.dp)

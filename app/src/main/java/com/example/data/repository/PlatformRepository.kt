@@ -1,180 +1,55 @@
 package com.example.data.repository
 
 import android.util.Log
-import com.example.data.SupabaseClient
-import com.example.data.local.TournamentDao
+import com.example.data.db.AppDatabase
 import com.example.data.model.LeaderboardPlayer
 import com.example.data.model.Tournament
 import com.example.data.model.Transaction
 import com.example.data.model.User
-import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 
-class PlatformRepository(private val dao: TournamentDao) {
+class PlatformRepository(private val db: AppDatabase) {
 
-    private val _user = MutableStateFlow<User?>(null)
-    val user: Flow<User?> = _user.asStateFlow()
-
-    private val _tournaments = MutableStateFlow<List<Tournament>>(emptyList())
-    val tournaments: Flow<List<Tournament>> = _tournaments.asStateFlow()
-
-    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
-    val transactions: Flow<List<Transaction>> = _transactions.asStateFlow()
-
-    private val _leaderboard = MutableStateFlow<List<LeaderboardPlayer>>(emptyList())
-    val leaderboard: Flow<List<LeaderboardPlayer>> = _leaderboard.asStateFlow()
+    val user: Flow<User?> = db.userDao().getUser()
+    val tournaments: Flow<List<Tournament>> = db.tournamentDao().getAll()
+    val transactions: Flow<List<Transaction>> = db.transactionDao().getAll()
+    val leaderboard: Flow<List<LeaderboardPlayer>> = db.leaderboardDao().getAll()
 
     fun getTournamentById(id: String): Flow<Tournament?> {
-        val flow = MutableStateFlow<Tournament?>(null)
-        // Just return from memory
-        flow.value = _tournaments.value.find { it.id == id }
-        return flow.asStateFlow()
+        return tournaments.map { list -> list.find { it.id == id } }
     }
-
 
     suspend fun seedDatabase() {
         try {
-            // Attempt to fetch from real database
-            _tournaments.value = SupabaseClient.client.postgrest["tournaments"].select().decodeList<Tournament>()
-            _user.value = SupabaseClient.client.postgrest["users"].select().decodeList<User>().firstOrNull()
-            _transactions.value = SupabaseClient.client.postgrest["transactions"].select().decodeList<Transaction>()
-            _leaderboard.value = SupabaseClient.client.postgrest["leaderboard"].select().decodeList<LeaderboardPlayer>()
-        } catch (e: Exception) {
-            Log.e("Supabase", "Failed to fetch from remote DB. Falling back to local offline DB.", e)
-            fetchLocalOfflineFallback()
-        }
-    }
-
-    private suspend fun fetchLocalOfflineFallback() {
-        // Only seed if user or tournaments don't exist yet
-        val currentUser = dao.getUser().firstOrNull()
-        if (currentUser == null) {
-            // Seed User
-            dao.insertUser(User(id = 0, username = "VeloWarrior_99", phoneOrEmail = "+91 9876543210", balance = 500.0, avatarIdx = 2))
-
-            // Seed Tournaments
-            val initialTournaments = listOf(
-                Tournament(
-                    id = "t1",
-                    title = "Solo Battle Royale - Erangel",
-                    game = "BGMI",
-                    prizePool = 1000.0,
-                    entryFee = 10.0,
-                    maxSlots = 100,
-                    filledSlots = 45,
-                    dateTimeStr = "Today at 8:00 PM",
-                    mapType = "Erangel",
-                    perspective = "TPP",
-                    bannerIdx = 1
-                ),
-                Tournament(
-                    id = "t2",
-                    title = "Ultimate Squad Clash",
-                    game = "Free Fire",
-                    prizePool = 5000.0,
-                    entryFee = 50.0,
-                    maxSlots = 100,
-                    filledSlots = 82,
-                    dateTimeStr = "Today at 9:30 PM",
-                    mapType = "Bermuda",
-                    perspective = "FPP",
-                    bannerIdx = 2
-                ),
-                Tournament(
-                    id = "t3",
-                    title = "Mega Championship Elite",
-                    game = "BGMI",
-                    prizePool = 10000.0,
-                    entryFee = 100.0,
-                    maxSlots = 200,
-                    filledSlots = 154,
-                    dateTimeStr = "Tomorrow at 8:00 PM",
-                    mapType = "Miramar",
-                    perspective = "TPP",
-                    bannerIdx = 3
-                ),
-                Tournament(
-                    id = "t4",
-                    title = "Sniper Showdown (Solos)",
-                    game = "BGMI",
-                    prizePool = 2500.0,
-                    entryFee = 25.0,
-                    maxSlots = 80,
-                    filledSlots = 31,
-                    dateTimeStr = "Tomorrow at 6:00 PM",
-                    mapType = "Sanhok",
-                    perspective = "FPP",
-                    bannerIdx = 1
-                ),
-                Tournament(
-                    id = "t5",
-                    title = "Free Fire Masters Weekly",
-                    game = "Free Fire",
-                    prizePool = 1500.0,
-                    entryFee = 0.0, // FREE
-                    maxSlots = 50,
-                    filledSlots = 48,
-                    dateTimeStr = "May 24 at 5:00 PM",
-                    mapType = "Kalahari",
-                    perspective = "TPP",
-                    bannerIdx = 2
-                ),
-                Tournament(
-                    id = "t6",
-                    title = "Midnight Rush Combat",
-                    game = "Free Fire",
-                    prizePool = 800.0,
-                    entryFee = 10.0,
-                    maxSlots = 48,
-                    filledSlots = 12,
-                    dateTimeStr = "May 25 at 11:30 PM",
-                    mapType = "Purgatory",
-                    perspective = "TPP",
-                    bannerIdx = 3
+            // Seed local database if empty
+            if (db.tournamentDao().getAll().firstOrNull()?.isEmpty() != false) {
+                db.tournamentDao().insertAll(
+                    listOf(
+                        Tournament(title = "BGMI Solo Battle Royale", game = "BGMI", prizePool = 10000.0, entryFee = 20.0, maxSlots = 100, filledSlots = 45, dateTimeStr = "Today at 8:00 PM", mapType = "Erangel", perspective = "TPP", bannerIdx = 1),
+                        Tournament(title = "Free Fire Squad Rush", game = "Free Fire", prizePool = 25000.0, entryFee = 100.0, maxSlots = 48, filledSlots = 40, dateTimeStr = "Tomorrow at 5:00 PM", mapType = "Bermuda", perspective = "TPP", bannerIdx = 2),
+                        Tournament(title = "BGMI TDM 4v4", game = "BGMI", prizePool = 5000.0, entryFee = 50.0, maxSlots = 8, filledSlots = 8, dateTimeStr = "Today at 10:00 PM", mapType = "Warehouse", perspective = "FPP", bannerIdx = 3)
+                    )
                 )
-            )
-            dao.insertTournaments(initialTournaments)
-
-            // Seed Transactions
-            val seedTransactions = listOf(
-                Transaction(type = "ADD_FUNDS", amount = 300.0, detail = "Fund Deposited via GPay", isPositive = true),
-                Transaction(type = "ENTRY_FEE", amount = 10.0, detail = "BGMI Solo Battle Royale - Joined", isPositive = false),
-                Transaction(type = "WINNINGS", amount = 210.0, detail = "BGMI Solo Battle Royale - Rank #4 Prize", isPositive = true)
-            )
-            for (tx in seedTransactions) {
-                dao.insertTransaction(tx)
+                db.leaderboardDao().insertAll(
+                    listOf(
+                        LeaderboardPlayer(1, "VeloWarrior_99", 125000.0, 534, 1),
+                        LeaderboardPlayer(2, "SniperKingx", 89400.0, 412, 2),
+                        LeaderboardPlayer(3, "ToxicMamba", 67000.0, 310, 3),
+                        LeaderboardPlayer(4, "HeadHunter_Z", 54300.0, 276, 1),
+                        LeaderboardPlayer(5, "UnknownPlayerX", 45000.0, 250, 2)
+                    )
+                )
             }
-
-            // Seed Leaderboard
-            val players = listOf(
-                LeaderboardPlayer(rank = 1, username = "Deadshot_Viper", totalWinnings = 15400.0, kills = 482, avatarIdx = 1),
-                LeaderboardPlayer(rank = 2, username = "Neon_Slayer", totalWinnings = 12100.0, kills = 389, avatarIdx = 2),
-                LeaderboardPlayer(rank = 3, username = "AlphaDraken", totalWinnings = 9800.0, kills = 311, avatarIdx = 3),
-                LeaderboardPlayer(rank = 4, username = "VeloRix_Pro", totalWinnings = 7500.0, kills = 254, avatarIdx = 4),
-                LeaderboardPlayer(rank = 5, username = "SniperKing_47", totalWinnings = 6300.0, kills = 212, avatarIdx = 5),
-                LeaderboardPlayer(rank = 6, username = "FreeFire_Legend", totalWinnings = 5100.0, kills = 182, avatarIdx = 1),
-                LeaderboardPlayer(rank = 7, username = "BGMIBoy_OP", totalWinnings = 4200.0, kills = 165, avatarIdx = 3),
-                LeaderboardPlayer(rank = 8, username = "Trigger_Happy", totalWinnings = 3500.0, kills = 143, avatarIdx = 2),
-                LeaderboardPlayer(rank = 9, username = "Ghost_Reaper", totalWinnings = 2900.0, kills = 112, avatarIdx = 4),
-                LeaderboardPlayer(rank = 10, username = "X_Rishabh_X", totalWinnings = 1800.0, kills = 98, avatarIdx = 5)
-            )
-            dao.insertLeaderboard(players)
+        } catch (e: Throwable) {
+            Log.e("Room", "Failed to seed DB.", e)
         }
-
-        // Output local values
-        _user.value = dao.getUser().firstOrNull()
-        _tournaments.value = dao.getAllTournaments().firstOrNull() ?: emptyList()
-        _transactions.value = dao.getAllTransactions().firstOrNull() ?: emptyList()
-        _leaderboard.value = dao.getLeaderboard().firstOrNull() ?: emptyList()
     }
 
     suspend fun joinTournament(tournamentId: String): JoinResult {
-        // Fallback to local user if remote hasn't loaded yet?
-        val userItem = _user.value ?: return JoinResult.Failure("User not found")
-        val match = _tournaments.value.find { it.id == tournamentId } 
+        val userItem = user.firstOrNull() ?: return JoinResult.Failure("User not found")
+        val match = tournaments.firstOrNull()?.find { it.id == tournamentId } 
             ?: return JoinResult.Failure("Tournament not found")
 
         if (match.joined) return JoinResult.Failure("Already joined this tournament")
@@ -183,96 +58,71 @@ class PlatformRepository(private val dao: TournamentDao) {
 
         val updatedUser = userItem.copy(balance = userItem.balance - match.entryFee)
         val updatedMatch = match.copy(joined = true, filledSlots = match.filledSlots + 1)
-        val newTx = Transaction(type = "ENTRY_FEE", amount = match.entryFee, detail = "Joined ${match.game}: ${match.title}", isPositive = false)
+        val newTx = Transaction(type = "ENTRY_FEE", amount = match.entryFee, detail = "Joined ${match.game}: ${match.title}", isPositive = false, timestamp = System.currentTimeMillis())
 
         try {
-            // Push to Supabase
-            SupabaseClient.client.postgrest["users"].update(updatedUser) { filter { eq("id", updatedUser.id) } }
-            SupabaseClient.client.postgrest["tournaments"].update(updatedMatch) { filter { eq("id", updatedMatch.id) } }
-            SupabaseClient.client.postgrest["transactions"].insert(newTx)
-            // Update local memory
-            _user.value = updatedUser
-            _tournaments.value = _tournaments.value.map { if (it.id == updatedMatch.id) updatedMatch else it }
-            _transactions.value = _transactions.value + newTx
-            // Update local DB for offline access
-            dao.updateUser(updatedUser)
-            dao.updateTournament(updatedMatch)
-            dao.insertTransaction(newTx)
-        } catch (e: Exception) {
-            Log.e("Supabase", "Supabase sync failed. Operating locally.", e)
-            dao.updateUser(updatedUser)
-            dao.updateTournament(updatedMatch)
-            dao.insertTransaction(newTx)
-            _user.value = updatedUser
-            _tournaments.value = _tournaments.value.map { if (it.id == updatedMatch.id) updatedMatch else it }
-            _transactions.value = _transactions.value + newTx
+            db.userDao().update(updatedUser)
+            db.tournamentDao().update(updatedMatch)
+            db.transactionDao().insert(newTx)
+        } catch (e: Throwable) {
+            Log.e("Room", "Sync failed.", e)
+            return JoinResult.Failure("Database error. Try again.")
         }
 
         return JoinResult.Success("Successfully registered for ${match.title}! Room ID will be shared 15 mins before match.")
     }
 
     suspend fun addFunds(amount: Double) {
-        val userItem = _user.value ?: return
+        val userItem = user.firstOrNull() ?: return
         val updatedUser = userItem.copy(balance = userItem.balance + amount)
-        val newTx = Transaction(type = "ADD_FUNDS", amount = amount, detail = "Added funds to Wallet via UPI", isPositive = true)
+        val newTx = Transaction(type = "ADD_FUNDS", amount = amount, detail = "Added funds to Wallet via UPI", isPositive = true, timestamp = System.currentTimeMillis())
 
         try {
-            SupabaseClient.client.postgrest["users"].update(updatedUser) { filter { eq("id", updatedUser.id) } }
-            SupabaseClient.client.postgrest["transactions"].insert(newTx)
-            
-            _user.value = updatedUser
-            _transactions.value = _transactions.value + newTx
-            
-            dao.updateUser(updatedUser)
-            dao.insertTransaction(newTx)
-        } catch (e: Exception) {
-            dao.updateUser(updatedUser)
-            dao.insertTransaction(newTx)
-            _user.value = updatedUser
-            _transactions.value = _transactions.value + newTx
+            db.userDao().update(updatedUser)
+            db.transactionDao().insert(newTx)
+        } catch (e: Throwable) {
+            Log.e("Room", "Failed to add funds", e)
         }
     }
 
     suspend fun withdrawFunds(amount: Double): WithdrawResult {
-        val userItem = _user.value ?: return WithdrawResult.Failure("User info missing")
+        val userItem = user.firstOrNull() ?: return WithdrawResult.Failure("User info missing")
         if (amount <= 0) return WithdrawResult.Failure("Amount must be greater than zero")
         if (userItem.balance < amount) return WithdrawResult.Failure("Insufficient balance")
 
         val updatedUser = userItem.copy(balance = userItem.balance - amount)
-        val newTx = Transaction(type = "WITHDRAWAL", amount = amount, detail = "Withdrawn to linked UPI / Bank Account", isPositive = false)
+        val newTx = Transaction(type = "WITHDRAWAL", amount = amount, detail = "Withdrawn to linked UPI / Bank Account", isPositive = false, timestamp = System.currentTimeMillis())
 
         try {
-            SupabaseClient.client.postgrest["users"].update(updatedUser) { filter { eq("id", updatedUser.id) } }
-            SupabaseClient.client.postgrest["transactions"].insert(newTx)
-            _user.value = updatedUser
-            _transactions.value = _transactions.value + newTx
-            dao.updateUser(updatedUser)
-            dao.insertTransaction(newTx)
-        } catch (e: Exception) {
-            dao.updateUser(updatedUser)
-            dao.insertTransaction(newTx)
-            _user.value = updatedUser
-            _transactions.value = _transactions.value + newTx
+            db.userDao().update(updatedUser)
+            db.transactionDao().insert(newTx)
+        } catch (e: Throwable) {
+            Log.e("Room", "Withdraw failed", e)
         }
         return WithdrawResult.Success("Withdrawal of ₹$amount initiated successfully. Funds will reflect in 4 hours!")
     }
 
-    suspend fun saveUserProfile(username: String, phoneOrEmail: String) {
-        val currentUser = _user.value
-        val newUser = currentUser?.copy(username = username, phoneOrEmail = phoneOrEmail) 
-            ?: User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2)
+    suspend fun updateProfile(updatedUser: User) {
+        try {
+            db.userDao().update(updatedUser)
+        } catch (e: Throwable) {
+            Log.e("Room", "Failed to update profile", e)
+        }
+    }
+
+    suspend fun saveUserProfile(username: String, phoneOrEmail: String, passwordHash: String = "") {
+        val currentUser = user.firstOrNull()
+        val newUser = currentUser?.copy(username = username, phoneOrEmail = phoneOrEmail, passwordHash = passwordHash.ifEmpty { currentUser.passwordHash }) 
+            ?: User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2, passwordHash = passwordHash)
             
         try {
             if (currentUser != null) {
-                SupabaseClient.client.postgrest["users"].update(newUser) { filter { eq("id", newUser.id) } }
+                db.userDao().update(newUser)
             } else {
-                SupabaseClient.client.postgrest["users"].insert(newUser)
+                db.userDao().insert(newUser)
             }
-            _user.value = newUser
-            if (currentUser != null) dao.updateUser(newUser) else dao.insertUser(newUser)
-        } catch (e: Exception) {
-            _user.value = newUser
-            if (currentUser != null) dao.updateUser(newUser) else dao.insertUser(newUser)
+        } catch (e: Throwable) {
+            Log.e("Room", "Failed to save profile", e)
         }
     }
 }
@@ -286,3 +136,4 @@ sealed interface WithdrawResult {
     data class Success(val message: String) : WithdrawResult
     data class Failure(val message: String) : WithdrawResult
 }
+

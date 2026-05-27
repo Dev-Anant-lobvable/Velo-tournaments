@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "27931798964",
+    "project_id": "velorix-tournaments",
+    "storage_bucket": "velorix-tournaments.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:27931798964:android:8e63979e3ef30c1ebe56e1",
+        "android_client_info": {
+          "package_name": "com.tournaments.velorix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCb5K_V5FT5jeyydEO92RnoLHr75pdnTEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

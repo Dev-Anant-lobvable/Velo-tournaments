@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,7 +86,7 @@ fun SplashScreen(
             // Glowing concentric circles around the core logo
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(140.dp)
+                modifier = Modifier.size(280.dp)
             ) {
                 // Outer faint glow
                 Box(
@@ -95,7 +98,7 @@ fun SplashScreen(
                 // Mid glow
                 Box(
                     modifier = Modifier
-                        .size(110.dp)
+                        .size(240.dp)
                         .border(1.dp, velorixRed.copy(alpha = 0.15f), CircleShape)
                 )
 
@@ -103,13 +106,13 @@ fun SplashScreen(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(200.dp)
                         .border(1.dp, velorixRed.copy(alpha = 0.8f), CircleShape)
                         .clip(CircleShape)
                         .background(Color(0xFF0F0004)) // Pitch black with slight red tint
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.velorix_logo), 
+                        painter = painterResource(id = com.example.R.drawable.velorix_logo_image),
                         contentDescription = "Velorix Core Logo",
                         modifier = Modifier
                             .fillMaxSize()

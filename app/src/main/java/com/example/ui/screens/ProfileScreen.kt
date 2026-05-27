@@ -1,0 +1,235 @@
+package com.example.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.User
+import com.example.ui.components.VeloRixButton
+import com.example.ui.theme.CyberpunkYellow
+import com.example.ui.theme.DeepSpaceBlack
+import com.example.ui.viewmodel.PlatformViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileScreen(
+    viewModel: PlatformViewModel,
+    onLogout: () -> Unit
+) {
+    val user by viewModel.userState.collectAsStateWithLifecycle()
+    var isEditing by remember { mutableStateOf(false) }
+    var editedUsername by remember { mutableStateOf(user?.username ?: "") }
+    var editedPhone by remember { mutableStateOf(user?.phoneOrEmail ?: "") }
+    var selectedAvatarIdx by remember { mutableStateOf(user?.avatarIdx ?: 1) }
+
+    LaunchedEffect(user) {
+        val u = user
+        if (!isEditing && u != null) {
+            editedUsername = u.username
+            editedPhone = u.phoneOrEmail
+            selectedAvatarIdx = u.avatarIdx
+        }
+    }
+
+    Scaffold(
+        containerColor = DeepSpaceBlack,
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.velorix_logo_image),
+                            contentDescription = "Logo",
+                            modifier = Modifier.size(32.dp).padding(end = 8.dp)
+                        )
+                        Text("COMMAND CENTER", color = CyberpunkYellow, fontWeight = FontWeight.Bold)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xD9101018),
+                    titleContentColor = CyberpunkYellow
+                ),
+                actions = {
+                    IconButton(onClick = { 
+                        viewModel.logout()
+                        onLogout() 
+                    }) {
+                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = "Logout", tint = Color.White)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        val currentUser = user
+        if (currentUser == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = CyberpunkYellow)
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Avatar Selection
+                val avatarColors = listOf(
+                    Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF3F51B5), 
+                    Color(0xFF00BCD4), Color(0xFF4CAF50), Color(0xFFFF9800)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(avatarColors[selectedAvatarIdx % avatarColors.size].copy(alpha = 0.2f))
+                        .border(2.dp, if (isEditing) CyberpunkYellow else Color.Transparent, CircleShape)
+                        .clickable(enabled = isEditing) {
+                            selectedAvatarIdx = (selectedAvatarIdx + 1) % avatarColors.size
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Face,
+                        contentDescription = "Avatar",
+                        modifier = Modifier.size(80.dp),
+                        tint = avatarColors[selectedAvatarIdx % avatarColors.size]
+                    )
+                    if (isEditing) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                            shape = CircleShape,
+                            color = CyberpunkYellow
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Avatar",
+                                modifier = Modifier.padding(4.dp).size(16.dp),
+                                tint = Color.Black
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (isEditing) {
+                    OutlinedTextField(
+                        value = editedUsername,
+                        onValueChange = { editedUsername = it },
+                        label = { Text("Gamertag", color = Color.Gray) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = CyberpunkYellow,
+                            unfocusedBorderColor = Color.DarkGray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = editedPhone,
+                        onValueChange = { editedPhone = it },
+                        label = { Text("Phone / Email", color = Color.Gray) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = CyberpunkYellow,
+                            unfocusedBorderColor = Color.DarkGray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        OutlinedButton(
+                            onClick = { 
+                                isEditing = false 
+                                editedUsername = currentUser.username
+                                editedPhone = currentUser.phoneOrEmail
+                                selectedAvatarIdx = currentUser.avatarIdx
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                        ) {
+                            Text("Discard")
+                        }
+                        VeloRixButton(
+                            text = "SAVE UPDATE",
+                            onClick = {
+                                val updatedUser = currentUser.copy(
+                                    username = editedUsername,
+                                    phoneOrEmail = editedPhone,
+                                    avatarIdx = selectedAvatarIdx
+                                )
+                                viewModel.updateProfile(updatedUser)
+                                isEditing = false
+                            },
+                            testTag = "save_profile_btn"
+                        )
+                    }
+                } else {
+                    Text(
+                        text = currentUser.username,
+                        color = Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = currentUser.phoneOrEmail,
+                        color = Color.Gray,
+                        fontSize = 16.sp,
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF1E1E28))
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("CURRENT RANK", color = Color.Gray, fontSize = 12.sp)
+                            Text("Elite Lvl 42", color = CyberpunkYellow, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("WALLET", color = Color.Gray, fontSize = 12.sp)
+                            Text("₹${currentUser.balance}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                    VeloRixButton(
+                        text = "EDIT PROFILE",
+                        onClick = { isEditing = true },
+                        testTag = "edit_profile_btn"
+                    )
+                }
+            }
+        }
+    }
+}

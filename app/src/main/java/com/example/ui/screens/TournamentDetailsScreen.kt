@@ -27,8 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.model.Tournament
 import com.example.ui.components.VeloRixButton
 import com.example.ui.theme.CyberpunkYellow
@@ -73,20 +71,16 @@ fun TournamentDetailsScreen(
                         .fillMaxWidth()
                         .height(220.dp)
                 ) {
-                    val coverImg = when (t.bannerIdx) {
-                        1 -> "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600"
-                        2 -> "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=600"
-                        else -> "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600"
+                    val coverBg = when (t.bannerIdx) {
+                        1 -> Brush.verticalGradient(colors = listOf(Color(0xFF333333), DeepSpaceBlack))
+                        2 -> Brush.verticalGradient(colors = listOf(Color(0xFFEE2B4B), DeepSpaceBlack))
+                        else -> Brush.verticalGradient(colors = listOf(CyberpunkYellow.copy(alpha=0.5f), DeepSpaceBlack))
                     }
 
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(coverImg)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = t.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(coverBg)
                     )
 
                     // Overlay bottom shader

@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -65,14 +66,21 @@ fun LeaderboardScreen(viewModel: PlatformViewModel) {
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                Text(
-                    text = "VELORIX CHAMPIONS",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        color = ElectricBlue,
-                        letterSpacing = 2.sp,
-                        fontWeight = FontWeight.Bold
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.velorix_logo_image),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(36.dp).padding(end = 6.dp)
                     )
-                )
+                    Text(
+                        text = "VELORIX CHAMPIONS",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = ElectricBlue,
+                            letterSpacing = 2.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
                 Text(
                     text = "LEADERBOARD",
                     style = MaterialTheme.typography.displayLarge.copy(

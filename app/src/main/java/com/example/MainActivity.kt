@@ -22,14 +22,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.*
-import com.example.data.local.AppDatabase
 import com.example.data.repository.PlatformRepository
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.CyberpunkYellow
 import com.example.ui.theme.DeepSpaceBlack
 import com.example.ui.viewmodel.PlatformViewModel
-import com.example.ui.viewmodel.PlatformViewModelFactory
 
 class MainActivity : ComponentActivity() {
     
@@ -37,13 +35,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Robust initialization bypassing fragile dependency injection
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = PlatformRepository(database.tournamentDao())
-        
-        val viewModel: PlatformViewModel by viewModels {
-            PlatformViewModelFactory(repository)
-        }
+        val viewModel: PlatformViewModel by viewModels()
 
         setContent {
             MyApplicationTheme {
@@ -202,6 +194,27 @@ class MainActivity : ComponentActivity() {
                                             ),
                                             modifier = Modifier.testTag("nav_wallet")
                                         )
+
+                                        // Profile Tab
+                                        NavigationBarItem(
+                                            selected = currentTabState == "profile",
+                                            onClick = { currentTabState = "profile" },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person,
+                                                    contentDescription = "User Profile"
+                                                )
+                                            },
+                                            label = { Text("PROFILE", fontSize = 10.sp) },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                selectedIconColor = CyberpunkYellow,
+                                                selectedTextColor = CyberpunkYellow,
+                                                unselectedIconColor = Color(0xFF8E8E9F),
+                                                unselectedTextColor = Color(0xFF8E8E9F),
+                                                indicatorColor = Color(0x26E5FF00)
+                                            ),
+                                            modifier = Modifier.testTag("nav_profile")
+                                        )
                                     }
                                 }
                             }
@@ -239,6 +252,16 @@ class MainActivity : ComponentActivity() {
                                     }
                                     "wallet" -> {
                                         WalletScreen(viewModel = viewModel)
+                                    }
+                                    "profile" -> {
+                                        ProfileScreen(
+                                            viewModel = viewModel,
+                                            onLogout = {
+                                                navController.navigate("auth") {
+                                                    popUpTo(0)
+                                                }
+                                            }
+                                        )
                                     }
                                 }
                             }

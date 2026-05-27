@@ -43,7 +43,8 @@ data class User(
     val username: String = "ProGamer_X",
     val phoneOrEmail: String = "+91 9876543210",
     val balance: Double = 500.0,
-    val avatarIdx: Int = 2
+    val avatarIdx: Int = 2,
+    val passwordHash: String = ""
 )
 
 @Serializable

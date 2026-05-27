@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -63,23 +64,13 @@ fun AuthScreen(
                 .padding(vertical = 32.dp)
         ) {
             // VeloRix Mini esports logo representation
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(100.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = null,
-                    tint = CyberpunkYellow,
-                    modifier = Modifier.size(80.dp)
-                )
-                Icon(
-                    imageVector = Icons.Default.SportsEsports,
-                    contentDescription = null,
-                    tint = DeepSpaceBlack,
-                    modifier = Modifier.size(42.dp)
-                )
-            }
+            Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.velorix_logo_image),
+                contentDescription = "VeloRix Logo",
+                modifier = Modifier
+                    .size(140.dp)
+                    .padding(bottom = 8.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -202,9 +193,9 @@ fun AuthScreen(
                 text = buttonText,
                 onClick = {
                     if (isSignUpMode) {
-                        viewModel.register(username, phoneOrEmail, onComplete = onAuthSuccess)
+                        viewModel.register(username, phoneOrEmail, password, onComplete = onAuthSuccess)
                     } else {
-                        viewModel.login(phoneOrEmail, onComplete = onAuthSuccess)
+                        viewModel.login(phoneOrEmail, password, onComplete = onAuthSuccess)
                     }
                 },
                 modifier = Modifier

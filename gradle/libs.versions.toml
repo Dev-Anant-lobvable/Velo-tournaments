@@ -39,8 +39,9 @@ datastorePreferences = "1.1.7"
 robolectric = "4.16.1"
 roborazzi = "1.59.0"
 firebaseBom = "34.12.0"
+googleServices = "4.4.2"
 secretsGradlePlugin = "2.0.1"
-hilt = "2.51.1"
+hilt = "2.53.1"
 supabase = "2.6.1"
 ktor = "2.3.12"
 
@@ -92,8 +93,13 @@ roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi
 roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "roborazzi" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-ai = { group = "com.google.firebase", name = "firebase-ai" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.2.0" }
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
 supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
 supabase-gotrue = { group = "io.github.jan-tennert.supabase", name = "gotrue-kt" }
@@ -108,3 +114,4 @@ roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 secrets = { id = "com.google.android.libraries.mapsplatform.secrets-gradle-plugin", version.ref = "secretsGradlePlugin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinPluginSerialization" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

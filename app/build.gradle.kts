@@ -9,6 +9,7 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.google.services)
 }
 
 android {
@@ -16,7 +17,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.velorix.tgqwsn"
+    applicationId = "com.tournaments.velorix"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -75,6 +76,10 @@ secrets {
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.analytics)
+  implementation(libs.firebase.firestore)
+  implementation(libs.firebase.auth)
+  implementation(libs.firebase.database)
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)
@@ -95,7 +100,6 @@ dependencies {
   implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
-  implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   // implementation(libs.firebase.ai)
   implementation(libs.kotlinx.coroutines.android)
@@ -129,14 +133,3 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
-
-tasks.register("downloadFonts") {
-  doLast {
-    println("Skipping font download.")
-  }
-}
-
-tasks.register("downloadLogo", Exec::class) {
-  commandLine("curl", "-s", "-L", "-o", "src/main/res/drawable/velorix_logo.jpeg", "https://raw.githubusercontent.com/Dev-Anant-lobvable/Velo-tournaments/main/app/src/main/res/drawable/velorix_logo.jpeg")
-}
-

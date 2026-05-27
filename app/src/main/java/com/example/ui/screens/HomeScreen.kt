@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,8 +46,6 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.model.Tournament
 import com.example.ui.components.VeloRixButton
 import com.example.ui.theme.CyberpunkYellow
@@ -109,9 +108,10 @@ fun HomeScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "🎮",
-                                fontSize = 24.sp
+                            Image(
+                                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.velorix_logo_image),
+                                contentDescription = "Avatar Logo",
+                                modifier = Modifier.size(36.dp)
                             )
                         }
 
@@ -421,23 +421,7 @@ fun TournamentCard(
                     .height(120.dp)
                     .background(coverGradient)
             ) {
-                // Background coil image
-                val imgUrl = when (match.bannerIdx) {
-                    1 -> "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400"
-                    2 -> "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=400"
-                    else -> "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=400"
-                }
-
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(imgUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    alpha = 0.45f
-                )
+                // Removed Coil Image to stop unrecoverable crashes
 
                 // Gaming tag overlays
                 Row(
