@@ -5,13 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.data.model.LeaderboardPlayer
+import com.example.data.model.SearchHistory
 import com.example.data.model.Tournament
 import com.example.data.model.Transaction
 import com.example.data.model.User
 
 @Database(
-    entities = [Tournament::class, User::class, Transaction::class, LeaderboardPlayer::class],
-    version = 1,
+    entities = [Tournament::class, User::class, Transaction::class, LeaderboardPlayer::class, SearchHistory::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -19,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun transactionDao(): TransactionDao
     abstract fun leaderboardDao(): LeaderboardDao
+    abstract fun searchHistoryDao(): SearchHistoryDao
 
     companion object {
         @Volatile

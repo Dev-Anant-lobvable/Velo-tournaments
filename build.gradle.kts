@@ -18,3 +18,12 @@ tasks.register("listFiles") {
         }
     }
 }
+
+tasks.register("decodeKeystore") {
+    doLast {
+        val base64 = java.io.File("debug.keystore.base64").readText().trim()
+        val decoded = java.util.Base64.getDecoder().decode(base64)
+        java.io.File("debug.keystore").writeBytes(decoded)
+        println("Decoded successfully!")
+    }
+}

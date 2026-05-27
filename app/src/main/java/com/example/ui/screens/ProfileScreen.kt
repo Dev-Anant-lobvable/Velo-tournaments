@@ -12,6 +12,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +30,26 @@ import com.example.data.model.User
 import com.example.ui.components.VeloRixButton
 import com.example.ui.theme.CyberpunkYellow
 import com.example.ui.theme.DeepSpaceBlack
+import com.example.ui.theme.ElectricBlue
 import com.example.ui.viewmodel.PlatformViewModel
+
+@Composable
+fun AchievementBadge(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.2f))
+                .border(2.dp, color.copy(alpha = 0.5f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = title, tint = color, modifier = Modifier.size(28.dp))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -219,6 +241,28 @@ fun ProfileScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("WALLET", color = Color.Gray, fontSize = 12.sp)
                             Text("₹${currentUser.balance}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // ACHIEVEMENTS SECTION
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF1E1E28))
+                            .padding(16.dp)
+                    ) {
+                        Text("MILESTONES & ACHIEVEMENTS", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            AchievementBadge(icon = androidx.compose.material.icons.Icons.Default.EmojiEvents, title = "10 Wins", color = CyberpunkYellow)
+                            AchievementBadge(icon = androidx.compose.material.icons.Icons.Default.Stars, title = "Top 1%", color = ElectricBlue)
+                            AchievementBadge(icon = androidx.compose.material.icons.Icons.Default.LocalFireDepartment, title = "3 Streak", color = Color(0xFFE91E63))
                         }
                     }
 

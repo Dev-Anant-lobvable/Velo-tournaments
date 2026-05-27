@@ -51,6 +51,21 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             initialValue = emptyList()
         )
 
+    val searchHistory: StateFlow<List<String>> = repository.searchHistory
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun saveSearchQuery(query: String) {
+        if (query.isNotBlank()) {
+            viewModelScope.launch {
+                repository.saveSearchQuery(query)
+            }
+        }
+    }
+
     // Current selected tournament for details screen
     private val _selectedTournamentId = MutableStateFlow<String?>(null)
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)

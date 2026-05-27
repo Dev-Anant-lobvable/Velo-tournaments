@@ -55,3 +55,12 @@ interface LeaderboardDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(players: List<LeaderboardPlayer>)
 }
+
+@Dao
+interface SearchHistoryDao {
+    @Query("SELECT query FROM search_history ORDER BY timestamp DESC LIMIT 5")
+    fun getRecentSearches(): Flow<List<String>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(searchHistory: com.example.data.model.SearchHistory)
+}

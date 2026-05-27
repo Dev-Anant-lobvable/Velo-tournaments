@@ -35,6 +35,40 @@ import com.example.ui.theme.DeepSpaceBlack
 import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.TextGray
 import com.example.ui.viewmodel.PlatformViewModel
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.compose.ui.graphics.drawscope.Stroke
+import android.widget.Toast
+
+fun simulateLocalNotification(context: Context, matchTitle: String) {
+    val channelId = "tournament_reminders"
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            channelId,
+            "Tournament Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Alerts 15 mins before tournament starts"
+        }
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    val notification = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle("Tournament Starts in 15 Min!")
+        .setContentText("Room ID and Password are now available for $matchTitle")
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+        .build()
+
+    notificationManager.notify(System.currentTimeMillis().toInt(), notification)
+    Toast.makeText(context, "Notification Sent! (Check notification tray)", Toast.LENGTH_SHORT).show()
+}
 
 @Composable
 fun TournamentDetailsScreen(
@@ -346,6 +380,22 @@ fun DetailsTabContent(match: Tournament) {
                     color = Color.LightGray,
                     lineHeight = 18.sp
                 )
+                
+                if (match.joined) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    val context = LocalContext.current
+                    OutlinedButton(
+                        onClick = { simulateLocalNotification(context, match.title) },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        border = BorderStroke(1.5.dp, CyberpunkYellow),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CyberpunkYellow)
+                    ) {
+                        Icon(imageVector = Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "SIMULATE 15-MIN ALERT", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
             }
         }
     }
@@ -408,8 +458,10 @@ fun PrizePoolTabContent(match: Tournament) {
         RankPrize("Rank 2", level2),
         RankPrize("Rank 3", level3),
         RankPrize("Rank 4 - 10", level4_10),
-        RankPrize("Per Kill Bounty", 10.0)
+        RankPrize("Per Kill Bounty", 10.0) // constant sample
     )
+    
+    val totalPrizeForChart = rankingPrizes.take(4).sumOf { it.amount } 
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -418,13 +470,39 @@ fun PrizePoolTabContent(match: Tournament) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "PRIZE SPLIT CONFIGURATION",
+                text = "PRIZE SPLIT DISTRIBUTION",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Black,
                     color = CyberpunkYellow
                 )
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Pie Chart implementation
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.size(160.dp)) {
+                    var startAngle = 0f
+                    val colors = listOf(Color(0xFFE5C07B), Color(0xFFC0C0C0), Color(0xFFCD7F32), ElectricBlue)
+                    rankingPrizes.take(4).forEachIndexed { index, prize ->
+                        val sweepAngle = ((prize.amount.toFloat() / totalPrizeForChart.toFloat()) * 360f).coerceIn(0f, 360f)
+                        drawArc(
+                            color = colors.getOrElse(index) { Color.Gray },
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            style = Stroke(width = 40.dp.toPx())
+                        )
+                        startAngle += sweepAngle
+                    }
+                }
+                
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "TOTAL", fontSize = 10.sp, color = TextGray, fontWeight = FontWeight.Bold)
+                    Text(text = "₹${match.prizePool.toInt()}", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Black)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             rankingPrizes.forEachIndexed { idx, p ->
                 Row(

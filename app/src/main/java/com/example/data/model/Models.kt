@@ -56,3 +56,10 @@ data class LeaderboardPlayer(
     val kills: Int,
     val avatarIdx: Int
 )
+
+@Serializable
+@Entity(tableName = "search_history")
+data class SearchHistory(
+    @PrimaryKey val query: String,
+    val timestamp: Long
+)

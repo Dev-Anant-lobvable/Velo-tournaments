@@ -26,9 +26,18 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +78,23 @@ fun HomeScreen(
     val isRefreshing by viewModel.isRefreshingHome.collectAsState()
 
     var selectedCategory by remember { mutableStateOf("All") }
+    var searchQuery by remember { mutableStateOf("") }
+    var searchFocused by remember { mutableStateOf(false) }
+    val searchHistory by viewModel.searchHistory.collectAsState()
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val categories = listOf("All", "BGMI", "Free Fire")
+
+    val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val data = result.data
+            val results = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            val spokenText = results?.getOrNull(0) ?: ""
+            searchQuery = spokenText
+            viewModel.saveSearchQuery(spokenText)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -310,7 +335,7 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 20.dp),
+                        .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     categories.forEach { category ->
@@ -332,13 +357,86 @@ fun HomeScreen(
                         }
                     }
                 }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by title...", color = TextGray) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .onFocusChanged { searchFocused = it.isFocused },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CyberpunkYellow,
+                        unfocusedBorderColor = Color(0xFF1E1E2A),
+                        focusedContainerColor = Color(0xFF1E1E2A),
+                        unfocusedContainerColor = Color(0xFF1E1E2A),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            viewModel.saveSearchQuery(searchQuery)
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            }
+                            speechRecognizerLauncher.launch(intent)
+                        }) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Mic,
+                                contentDescription = "Voice Search",
+                                tint = CyberpunkYellow
+                            )
+                        }
+                    }
+                )
+
+                if (searchFocused && searchHistory.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF161622)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text("Recent Searches", color = TextGray, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp, bottom = 4.dp))
+                            searchHistory.forEach { historyQuery ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            searchQuery = historyQuery
+                                            viewModel.saveSearchQuery(historyQuery)
+                                            focusManager.clearFocus()
+                                        }
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, tint = TextGray, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(historyQuery, color = Color.White, fontSize = 14.sp)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
 
             // Upcoming Matches list
-            val filteredTournaments = if (selectedCategory == "All") {
-                tournaments
-            } else {
-                tournaments.filter { it.game == selectedCategory }
+            val filteredTournaments = tournaments.filter { t ->
+                val matchesCategory = selectedCategory == "All" || t.game == selectedCategory
+                val matchesSearch = searchQuery.isBlank() || t.title.contains(searchQuery, ignoreCase = true)
+                matchesCategory && matchesSearch
             }
 
             if (filteredTournaments.isEmpty()) {
@@ -385,21 +483,37 @@ fun TournamentCard(
     onClick: () -> Unit,
     onJoinClick: () -> Unit
 ) {
-    val context = LocalContext.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val rawProgress = if (match.maxSlots > 0) match.filledSlots.toFloat() / match.maxSlots.toFloat() else 0f
     val progress = rawProgress.coerceIn(0f, 1f)
+    
+    val scale = remember { androidx.compose.animation.core.Animatable(0.9f) }
+    val offsetX = remember { androidx.compose.animation.core.Animatable(10f) }
+    
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        repeat(4) {
+            offsetX.animateTo(((-3)..3).random().toFloat(), androidx.compose.animation.core.tween(40))
+        }
+        offsetX.animateTo(0f, androidx.compose.animation.core.tween(40))
+    }
 
     // Determine stylized gradient cover representing the game type (cyberpunk feel)
     val coverGradient = if (match.game == "BGMI") {
-        Brush.horizontalGradient(colors = listOf(Color(0xFF333333), Color(0xFF111111)))
+        androidx.compose.ui.graphics.Brush.horizontalGradient(colors = listOf(Color(0xFF333333), Color(0xFF111111)))
     } else {
-        Brush.horizontalGradient(colors = listOf(Color(0xFFEE2B4B), Color(0xFFA1102A)))
+        androidx.compose.ui.graphics.Brush.horizontalGradient(colors = listOf(Color(0xFFEE2B4B), Color(0xFFA1102A)))
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
+            .graphicsLayer { 
+                scaleX = scale.value
+                scaleY = scale.value
+                translationX = offsetX.value 
+            }
             .border(
                 1.dp,
                 if (match.joined) ElectricBlue.copy(alpha = 0.5f) else Color.Transparent,

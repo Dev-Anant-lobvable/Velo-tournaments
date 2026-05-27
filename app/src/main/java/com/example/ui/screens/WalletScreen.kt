@@ -55,6 +55,8 @@ fun WalletScreen(viewModel: PlatformViewModel) {
     var showWithdrawDialog by remember { mutableStateOf(false) }
     var withdrawAmount by remember { mutableStateOf("") }
     var upiId by remember { mutableStateOf("") }
+    var showReceiptDialog by remember { mutableStateOf(false) }
+    var lastWithdrawnAmount by remember { mutableStateOf("") }
 
     val presetAmounts = listOf(50.0, 100.0, 200.0, 500.0)
 
@@ -336,9 +338,11 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                             val amt = withdrawAmount.toDoubleOrNull() ?: 0.0
                             if (upiId.isNotBlank() && amt > 0) {
                                 viewModel.withdrawFunds(amt)
+                                lastWithdrawnAmount = amt.toString()
                                 showWithdrawDialog = false
                                 withdrawAmount = ""
                                 upiId = ""
+                                showReceiptDialog = true
                             }
                         },
                         modifier = Modifier.testTag("submit_withdraw_button"),
@@ -350,6 +354,68 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                 dismissButton = {
                     TextButton(onClick = { showWithdrawDialog = false }) {
                         Text("CANCEL", color = ElectricBlue)
+                    }
+                },
+                containerColor = DarkSurface,
+                shape = RoundedCornerShape(20.dp)
+            )
+        }
+
+        if (showReceiptDialog) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            AlertDialog(
+                onDismissRequest = { showReceiptDialog = false },
+                title = {
+                    Text(
+                        text = "WITHDRAWAL SUCCESS",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        color = NeonGreen
+                    )
+                },
+                text = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Your funds have been successfully withdrawn.",
+                            fontSize = 13.sp,
+                            color = TextGray,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Amount Withdrawn:", color = Color.Gray, fontSize = 14.sp)
+                            Text("₹$lastWithdrawnAmount", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Platform Fee:", color = Color.Gray, fontSize = 14.sp)
+                            Text("₹0.00", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Color.DarkGray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Sent:", color = Color.Gray, fontSize = 14.sp)
+                            Text("₹$lastWithdrawnAmount", color = NeonGreen, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { 
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, "I just successfully withdrew ₹$lastWithdrawnAmount from my Velorix Wallet!")
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, "Share Receipt"))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyberpunkYellow, contentColor = DeepSpaceBlack)
+                    ) {
+                        Text("SHARE RECEIPT", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReceiptDialog = false }) {
+                        Text("CLOSE", color = ElectricBlue)
                     }
                 },
                 containerColor = DarkSurface,

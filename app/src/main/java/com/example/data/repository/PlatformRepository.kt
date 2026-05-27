@@ -16,6 +16,11 @@ class PlatformRepository(private val db: AppDatabase) {
     val tournaments: Flow<List<Tournament>> = db.tournamentDao().getAll()
     val transactions: Flow<List<Transaction>> = db.transactionDao().getAll()
     val leaderboard: Flow<List<LeaderboardPlayer>> = db.leaderboardDao().getAll()
+    val searchHistory: Flow<List<String>> = db.searchHistoryDao().getRecentSearches()
+
+    suspend fun saveSearchQuery(query: String) {
+        db.searchHistoryDao().insert(com.example.data.model.SearchHistory(query, System.currentTimeMillis()))
+    }
 
     fun getTournamentById(id: String): Flow<Tournament?> {
         return tournaments.map { list -> list.find { it.id == id } }
