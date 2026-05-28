@@ -144,7 +144,7 @@ fun AuthScreen(
                     )
                 },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = if (phoneOrEmail.contains("@")) KeyboardType.Email else KeyboardType.Phone
+                    keyboardType = KeyboardType.Email
                 ),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(

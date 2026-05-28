@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.*
+import androidx.navigation.navDeepLink
 import com.example.data.repository.PlatformRepository
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
@@ -54,7 +55,11 @@ class MainActivity : ComponentActivity() {
                 NavHost(
                     navController = navController,
                     startDestination = "splash",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    enterTransition = { androidx.compose.animation.fadeIn() },
+                    exitTransition = { androidx.compose.animation.fadeOut() },
+                    popEnterTransition = { androidx.compose.animation.fadeIn() },
+                    popExitTransition = { androidx.compose.animation.fadeOut() }
                 ) {
                     // 1. SPLASH INTRO PORTAL
                     composable("splash") {
@@ -109,9 +114,9 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     NavigationBar(
                                         containerColor = Color.Transparent,
-                                        modifier = Modifier.height(64.dp)
+                                        modifier = Modifier.height(72.dp)
                                     ) {
-                                        // Feed Tab
+                                        // Home & Matches Tab
                                         NavigationBarItem(
                                             selected = currentTabState == "home",
                                             onClick = { currentTabState = "home" },
@@ -121,76 +126,55 @@ class MainActivity : ComponentActivity() {
                                                     contentDescription = "Home Hub"
                                                 )
                                             },
-                                            label = { Text("HOME", fontSize = 10.sp) },
+                                            label = { Text("HOME / MATCHES", fontSize = 10.sp) },
                                             colors = NavigationBarItemDefaults.colors(
                                                 selectedIconColor = CyberpunkYellow,
                                                 selectedTextColor = CyberpunkYellow,
-                                                unselectedIconColor = Color(0xFF8E8E9F),
-                                                unselectedTextColor = Color(0xFF8E8E9F),
-                                                indicatorColor = Color(0x26E5FF00)
+                                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                                indicatorColor = Color.Transparent
                                             ),
                                             modifier = Modifier.testTag("nav_home")
                                         )
 
-                                        // Matches & Lobbies Tab
-                                        NavigationBarItem(
-                                            selected = currentTabState == "matches",
-                                            onClick = { currentTabState = "matches" },
-                                            icon = {
-                                                Icon(
-                                                    imageVector = Icons.Default.SportsEsports,
-                                                    contentDescription = "My Registered Matches"
-                                                )
-                                            },
-                                            label = { Text("MATCHES", fontSize = 10.sp) },
-                                            colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = CyberpunkYellow,
-                                                selectedTextColor = CyberpunkYellow,
-                                                unselectedIconColor = Color(0xFF8E8E9F),
-                                                unselectedTextColor = Color(0xFF8E8E9F),
-                                                indicatorColor = Color(0x26E5FF00)
-                                            ),
-                                            modifier = Modifier.testTag("nav_matches")
-                                        )
-
-                                        // Ranks Leaderboard Tab
+                                        // Leaderboard Tab
                                         NavigationBarItem(
                                             selected = currentTabState == "leaderboard",
                                             onClick = { currentTabState = "leaderboard" },
                                             icon = {
                                                 Icon(
                                                     imageVector = Icons.Default.Leaderboard,
-                                                    contentDescription = "Global Rankings"
+                                                    contentDescription = "Leaderboard"
                                                 )
                                             },
                                             label = { Text("RANKS", fontSize = 10.sp) },
                                             colors = NavigationBarItemDefaults.colors(
                                                 selectedIconColor = CyberpunkYellow,
                                                 selectedTextColor = CyberpunkYellow,
-                                                unselectedIconColor = Color(0xFF8E8E9F),
-                                                unselectedTextColor = Color(0xFF8E8E9F),
-                                                indicatorColor = Color(0x26E5FF00)
+                                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                                indicatorColor = Color.Transparent
                                             ),
                                             modifier = Modifier.testTag("nav_leaderboard")
                                         )
 
-                                        // Balance & Wallet Tab
+                                        // Wallet Tab
                                         NavigationBarItem(
                                             selected = currentTabState == "wallet",
                                             onClick = { currentTabState = "wallet" },
                                             icon = {
                                                 Icon(
                                                     imageVector = Icons.Default.AccountBalanceWallet,
-                                                    contentDescription = "Dynamic Wallet Balance"
+                                                    contentDescription = "Wallet Balance"
                                                 )
                                             },
                                             label = { Text("WALLET", fontSize = 10.sp) },
                                             colors = NavigationBarItemDefaults.colors(
                                                 selectedIconColor = CyberpunkYellow,
                                                 selectedTextColor = CyberpunkYellow,
-                                                unselectedIconColor = Color(0xFF8E8E9F),
-                                                unselectedTextColor = Color(0xFF8E8E9F),
-                                                indicatorColor = Color(0x26E5FF00)
+                                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                                indicatorColor = Color.Transparent
                                             ),
                                             modifier = Modifier.testTag("nav_wallet")
                                         )
@@ -209,11 +193,32 @@ class MainActivity : ComponentActivity() {
                                             colors = NavigationBarItemDefaults.colors(
                                                 selectedIconColor = CyberpunkYellow,
                                                 selectedTextColor = CyberpunkYellow,
-                                                unselectedIconColor = Color(0xFF8E8E9F),
-                                                unselectedTextColor = Color(0xFF8E8E9F),
-                                                indicatorColor = Color(0x26E5FF00)
+                                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                                indicatorColor = Color.Transparent
                                             ),
                                             modifier = Modifier.testTag("nav_profile")
+                                        )
+
+                                        // Customer Support Tab
+                                        NavigationBarItem(
+                                            selected = currentTabState == "support",
+                                            onClick = { currentTabState = "support" },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.SupportAgent,
+                                                    contentDescription = "Customer Support"
+                                                )
+                                            },
+                                            label = { Text("SUPPORT", fontSize = 10.sp) },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                selectedIconColor = CyberpunkYellow,
+                                                selectedTextColor = CyberpunkYellow,
+                                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                                indicatorColor = Color.Transparent
+                                            ),
+                                            modifier = Modifier.testTag("nav_support")
                                         )
                                     }
                                 }
@@ -239,14 +244,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     }
-                                    "matches" -> {
-                                        MatchesScreen(
-                                            viewModel = viewModel,
-                                            onNavigateToTournament = { id ->
-                                                navController.navigate("details/$id")
-                                            }
-                                        )
-                                    }
                                     "leaderboard" -> {
                                         LeaderboardScreen(viewModel = viewModel)
                                     }
@@ -263,13 +260,19 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     }
+                                    "support" -> {
+                                        com.example.ui.screens.CustomerSupportScreen(viewModel = viewModel)
+                                    }
                                 }
                             }
                         }
                     }
 
                     // 4. TOURNAMENT COMPREHENSIVE DETAIL DISPLAY PANEL
-                    composable("details/{tournamentId}") { backStackEntry ->
+                    composable(
+                        "details/{tournamentId}",
+                        deepLinks = listOf(navDeepLink { uriPattern = "velorixtournaments://details/{tournamentId}" })
+                    ) { backStackEntry ->
                         val tournamentId = backStackEntry.arguments?.getString("tournamentId") ?: ""
                         TournamentDetailsScreen(
                             viewModel = viewModel,

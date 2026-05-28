@@ -11,9 +11,16 @@ import io.github.jan.supabase.postgrest.Postgrest
  */
 object SupabaseClient {
     val client by lazy {
+        val supabaseUrl = if (BuildConfig.url.isNotBlank() && BuildConfig.url.startsWith("http")) BuildConfig.url else ""
+        val supabaseKey = BuildConfig.key
+        
+        if (supabaseUrl.isBlank() || supabaseKey.isBlank()) {
+            android.util.Log.e("SupabaseClient", "API Keys are missing! Set 'url' and 'key' secrets in the Secrets Panel.")
+        }
+        
         createSupabaseClient(
-            supabaseUrl = if (BuildConfig.url.isNotBlank() && BuildConfig.url.startsWith("http")) BuildConfig.url else "https://xyz.supabase.co",
-            supabaseKey = if (BuildConfig.key.isNotBlank()) BuildConfig.key else "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+            supabaseUrl = supabaseUrl.ifEmpty { "https://placeholder.supabase.co" },
+            supabaseKey = supabaseKey.ifEmpty { "placeholder_key" }
         ) {
             install(Postgrest)
             install(Auth)

@@ -28,6 +28,10 @@ class PlatformRepository(private val db: AppDatabase) {
 
     suspend fun seedDatabase() {
         try {
+            if (db.userDao().getUser().firstOrNull() == null) {
+                db.userDao().insert(User(id = 0, username = "GuestWarrior", phoneOrEmail = "guest@velorix.com", balance = 500.0, avatarIdx = 2, passwordHash = "", sessionToken = ""))
+            }
+
             // Seed local database if empty
             if (db.tournamentDao().getAll().firstOrNull()?.isEmpty() != false) {
                 db.tournamentDao().insertAll(
@@ -115,10 +119,26 @@ class PlatformRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun saveUserProfile(username: String, phoneOrEmail: String, passwordHash: String = "") {
+    suspend fun updateSessionToken(token: String) {
         val currentUser = user.firstOrNull()
-        val newUser = currentUser?.copy(username = username, phoneOrEmail = phoneOrEmail, passwordHash = passwordHash.ifEmpty { currentUser.passwordHash }) 
-            ?: User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2, passwordHash = passwordHash)
+        if (currentUser != null) {
+            val newUser = currentUser.copy(sessionToken = token)
+            try {
+                db.userDao().update(newUser)
+            } catch (e: Throwable) {
+                Log.e("Room", "Failed to update session token", e)
+            }
+        }
+    }
+
+    suspend fun saveUserProfile(username: String, phoneOrEmail: String, passwordHash: String = "", sessionToken: String = "") {
+        val currentUser = user.firstOrNull()
+        val newUser = currentUser?.copy(
+            username = username, 
+            phoneOrEmail = phoneOrEmail, 
+            passwordHash = passwordHash.ifEmpty { currentUser.passwordHash },
+            sessionToken = sessionToken.ifEmpty { currentUser.sessionToken }
+        ) ?: User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2, passwordHash = passwordHash, sessionToken = sessionToken)
             
         try {
             if (currentUser != null) {

@@ -3,6 +3,12 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -61,6 +67,8 @@ fun ProfileScreen(
     var isEditing by remember { mutableStateOf(false) }
     var editedUsername by remember { mutableStateOf(user?.username ?: "") }
     var editedPhone by remember { mutableStateOf(user?.phoneOrEmail ?: "") }
+    var editedBio by remember { mutableStateOf(user?.bio ?: "") }
+    var editedSocial by remember { mutableStateOf(user?.socialLink ?: "") }
     var selectedAvatarIdx by remember { mutableStateOf(user?.avatarIdx ?: 1) }
 
     LaunchedEffect(user) {
@@ -68,6 +76,8 @@ fun ProfileScreen(
         if (!isEditing && u != null) {
             editedUsername = u.username
             editedPhone = u.phoneOrEmail
+            editedBio = u.bio
+            editedSocial = u.socialLink
             selectedAvatarIdx = u.avatarIdx
         }
     }
@@ -111,6 +121,7 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -181,6 +192,34 @@ fun ProfileScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = editedBio,
+                        onValueChange = { editedBio = it },
+                        label = { Text("Bio", color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = null, tint = CyberpunkYellow) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = CyberpunkYellow,
+                            unfocusedBorderColor = Color.DarkGray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = editedSocial,
+                        onValueChange = { editedSocial = it },
+                        label = { Text("Social Link", color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, tint = CyberpunkYellow) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = CyberpunkYellow,
+                            unfocusedBorderColor = Color.DarkGray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(modifier = Modifier.height(32.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -191,6 +230,8 @@ fun ProfileScreen(
                                 isEditing = false 
                                 editedUsername = currentUser.username
                                 editedPhone = currentUser.phoneOrEmail
+                                editedBio = currentUser.bio
+                                editedSocial = currentUser.socialLink
                                 selectedAvatarIdx = currentUser.avatarIdx
                             },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
@@ -203,6 +244,8 @@ fun ProfileScreen(
                                 val updatedUser = currentUser.copy(
                                     username = editedUsername,
                                     phoneOrEmail = editedPhone,
+                                    bio = editedBio,
+                                    socialLink = editedSocial,
                                     avatarIdx = selectedAvatarIdx
                                 )
                                 viewModel.updateProfile(updatedUser)
@@ -224,6 +267,22 @@ fun ProfileScreen(
                         color = Color.Gray,
                         fontSize = 16.sp,
                     )
+                    if (currentUser.bio.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = currentUser.bio,
+                            color = Color.LightGray,
+                            fontSize = 14.sp,
+                        )
+                    }
+                    if (currentUser.socialLink.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = currentUser.socialLink,
+                            color = ElectricBlue,
+                            fontSize = 14.sp,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(32.dp))
 
                     Row(
@@ -272,6 +331,35 @@ fun ProfileScreen(
                         onClick = { isEditing = true },
                         testTag = "edit_profile_btn"
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = { viewModel.exportUserData() },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = CyberpunkYellow,
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (currentUser.dataExported) "SYNC CUSTOMER DATA AGAIN" else "EXPORT & SECURE DATA")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = { 
+                            viewModel.deleteAccount()
+                            onLogout()
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFFE91E63),
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("DELETE ACCOUNT")
+                    }
                 }
             }
         }

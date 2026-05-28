@@ -14,7 +14,7 @@ plugins {
 
 android {
   namespace = "com.example"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  compileSdk = 35
 
   defaultConfig {
     applicationId = "com.aistudio.velorix.xkldpo"
@@ -75,12 +75,12 @@ secrets {
 // This makes it easy to add them back in the future if needed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
-  implementation(platform(libs.firebase.bom))
-  implementation(libs.firebase.analytics)
-  implementation(libs.firebase.firestore)
-  implementation(libs.firebase.auth)
+  // implementation(platform(libs.firebase.bom))
+  // implementation(libs.firebase.analytics)
+  // implementation(libs.firebase.firestore)
+  // implementation(libs.firebase.auth)
   implementation(libs.play.services.auth)
-  implementation(libs.firebase.database)
+  // implementation(libs.firebase.database)
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)

@@ -12,7 +12,7 @@ import com.example.data.model.User
 
 @Database(
     entities = [Tournament::class, User::class, Transaction::class, LeaderboardPlayer::class, SearchHistory::class],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,7 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "velorix_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance

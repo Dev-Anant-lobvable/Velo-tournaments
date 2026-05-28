@@ -44,7 +44,11 @@ data class User(
     val phoneOrEmail: String = "+91 9876543210",
     val balance: Double = 500.0,
     val avatarIdx: Int = 2,
-    val passwordHash: String = ""
+    val passwordHash: String = "",
+    val sessionToken: String = "",
+    val bio: String = "Ready for battle",
+    val socialLink: String = "@gamer",
+    val dataExported: Boolean = false
 )
 
 @Serializable

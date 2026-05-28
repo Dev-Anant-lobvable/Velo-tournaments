@@ -484,7 +484,13 @@ fun PrizePoolTabContent(match: Tournament) {
                     var startAngle = 0f
                     val colors = listOf(Color(0xFFE5C07B), Color(0xFFC0C0C0), Color(0xFFCD7F32), ElectricBlue)
                     rankingPrizes.take(4).forEachIndexed { index, prize ->
-                        val sweepAngle = ((prize.amount.toFloat() / totalPrizeForChart.toFloat()) * 360f).coerceIn(0f, 360f)
+                        var rawSweep = 0f
+                        if (totalPrizeForChart > 0) {
+                            rawSweep = (prize.amount.toFloat() / totalPrizeForChart.toFloat()) * 360f
+                        } else if (index == 0) {
+                            rawSweep = 360f // default edge case
+                        }
+                        val sweepAngle = rawSweep.takeIf { !it.isNaN() }?.coerceIn(0f, 360f) ?: 0f
                         drawArc(
                             color = colors.getOrElse(index) { Color.Gray },
                             startAngle = startAngle,

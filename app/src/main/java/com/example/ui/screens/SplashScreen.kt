@@ -30,9 +30,6 @@ import com.example.R
 import com.example.ui.theme.DeepSpaceBlack
 import com.example.ui.viewmodel.PlatformViewModel
 import kotlinx.coroutines.delay
-
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
@@ -115,12 +112,8 @@ fun SplashScreen(
                         .clip(CircleShape)
                         .background(Color(0xFF0F0004)) // Pitch black with slight red tint
                 ) {
-                    val context = LocalContext.current
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(com.example.R.drawable.velorix_logo_image)
-                            .crossfade(true)
-                            .build(),
+                    Image(
+                        painter = painterResource(id = com.example.R.drawable.velorix_logo_image),
                         contentDescription = "Velorix Core Logo",
                         modifier = Modifier
                             .fillMaxSize()
