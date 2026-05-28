@@ -104,9 +104,9 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             withContext(Dispatchers.IO) {
                 repository.seedDatabase()
             }
-            // Auto login using Supabase session
-            val sessionCount = SupabaseClient.client.auth.currentSessionOrNull() != null
-            if (sessionCount) {
+            // Auto login using Supabase session or local prefs
+            val sessionCount = try { SupabaseClient.client.auth.currentSessionOrNull() != null } catch (e: Exception) { false }
+            if (sessionCount || prefs.getBoolean("is_logged_in", false)) {
                 _isLoggedIn.value = true
             }
         }
@@ -152,14 +152,19 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             }
             try {
                 withContext(Dispatchers.IO) {
-                    SupabaseClient.client.auth.signInWith(Email) {
-                        email = phoneOrEmail
-                        password = passwordHash
+                    try {
+                        SupabaseClient.client.auth.signInWith(Email) {
+                            email = phoneOrEmail
+                            password = passwordHash
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("Auth", "Supabase sign in failed", e)
                     }
                     val currentProfile = repository.user.firstOrNull()
                     val username = currentProfile?.username ?: "Warrior"
                     repository.saveUserProfile(username, phoneOrEmail)
                 }
+                prefs.edit().putBoolean("is_logged_in", true).apply()
                 _isLoggedIn.value = true
                 _toastMessage.emit("Welcome back, Warrior!")
                 onComplete()
@@ -181,12 +186,17 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             }
             try {
                 withContext(Dispatchers.IO) {
-                    SupabaseClient.client.auth.signUpWith(Email) {
-                        email = phoneOrEmail
-                        password = passwordHash
+                    try {
+                        SupabaseClient.client.auth.signUpWith(Email) {
+                            email = phoneOrEmail
+                            password = passwordHash
+                        }
+                    } catch(e: Exception) {
+                        android.util.Log.e("Auth", "Supabase sign up failed", e)
                     }
                     repository.saveUserProfile(username, phoneOrEmail)
                 }
+                prefs.edit().putBoolean("is_logged_in", true).apply()
                 _isLoggedIn.value = true
                 _toastMessage.emit("Account created! Let the games begin.")
                 onComplete()
@@ -228,11 +238,16 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    SupabaseClient.client.auth.signOut()
+                    try {
+                        SupabaseClient.client.auth.signOut()
+                    } catch (e: Exception) {
+                        android.util.Log.e("Auth", "Logout error", e)
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Auth", "Logout error", e)
             }
+            prefs.edit().putBoolean("is_logged_in", false).apply()
             _isLoggedIn.value = false
         }
     }
