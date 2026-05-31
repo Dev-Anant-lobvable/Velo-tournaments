@@ -9,6 +9,22 @@ import com.example.data.model.User
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import com.example.data.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class AddFundsParams(val p_amount: Double)
+
+@Serializable
+data class WithdrawFundsParams(val p_amount: Double)
+
+@Serializable
+data class JoinTournamentParams(val p_tournament_id: String)
+
+@Serializable
+data class UpdateProfileParams(val p_username: String)
 
 class PlatformRepository(private val db: AppDatabase) {
 
@@ -26,33 +42,25 @@ class PlatformRepository(private val db: AppDatabase) {
         return tournaments.map { list -> list.find { it.id == id } }
     }
 
-    suspend fun seedDatabase() {
+    suspend fun fetchDataFromServer() {
         try {
-            if (db.userDao().getUser().firstOrNull() == null) {
-                db.userDao().insert(User(id = 0, username = "GuestWarrior", phoneOrEmail = "guest@velorix.com", balance = 500.0, avatarIdx = 2, passwordHash = "", sessionToken = ""))
+            // Strictly fetch from the server. Client-side demo fallback is removed.
+            val fetchedTournaments = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                SupabaseClient.client.postgrest["tournaments"].select().decodeList<Tournament>()
             }
-
-            // Seed local database if empty
-            if (db.tournamentDao().getAll().firstOrNull()?.isEmpty() != false) {
-                db.tournamentDao().insertAll(
-                    listOf(
-                        Tournament(title = "BGMI Solo Battle Royale", game = "BGMI", prizePool = 10000.0, entryFee = 20.0, maxSlots = 100, filledSlots = 45, dateTimeStr = "Today at 8:00 PM", mapType = "Erangel", perspective = "TPP", bannerIdx = 1),
-                        Tournament(title = "Free Fire Squad Rush", game = "Free Fire", prizePool = 25000.0, entryFee = 100.0, maxSlots = 48, filledSlots = 40, dateTimeStr = "Tomorrow at 5:00 PM", mapType = "Bermuda", perspective = "TPP", bannerIdx = 2),
-                        Tournament(title = "BGMI TDM 4v4", game = "BGMI", prizePool = 5000.0, entryFee = 50.0, maxSlots = 8, filledSlots = 8, dateTimeStr = "Today at 10:00 PM", mapType = "Warehouse", perspective = "FPP", bannerIdx = 3)
-                    )
-                )
-                db.leaderboardDao().insertAll(
-                    listOf(
-                        LeaderboardPlayer(1, "VeloWarrior_99", 125000.0, 534, 1),
-                        LeaderboardPlayer(2, "SniperKingx", 89400.0, 412, 2),
-                        LeaderboardPlayer(3, "ToxicMamba", 67000.0, 310, 3),
-                        LeaderboardPlayer(4, "HeadHunter_Z", 54300.0, 276, 1),
-                        LeaderboardPlayer(5, "UnknownPlayerX", 45000.0, 250, 2)
-                    )
-                )
+            if (fetchedTournaments.isNotEmpty()) {
+                db.tournamentDao().insertAll(fetchedTournaments)
             }
+            
+            val fetchedLeaderboard = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                SupabaseClient.client.postgrest["leaderboard"].select().decodeList<LeaderboardPlayer>()
+            }
+            if (fetchedLeaderboard.isNotEmpty()) {
+                db.leaderboardDao().insertAll(fetchedLeaderboard)
+            }
+            
         } catch (e: Throwable) {
-            Log.e("Room", "Failed to seed DB.", e)
+            Log.e("PlatformRepository", "Failed to fetch real data from Server.", e)
         }
     }
 
@@ -64,6 +72,17 @@ class PlatformRepository(private val db: AppDatabase) {
         if (match.joined) return JoinResult.Failure("Already joined this tournament")
         if (match.isFull) return JoinResult.Failure("Tournament is full")
         if (userItem.balance < match.entryFee) return JoinResult.Failure("Insufficient balance. Please add funds!")
+
+        try {
+            // SERVER-SIDE LOGIC
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                SupabaseClient.client.postgrest.rpc("join_tournament", JoinTournamentParams(tournamentId))
+            }
+            Log.d("PlatformRepository", "Supabase RPC join_tournament succeeded")
+        } catch (e: Throwable) {
+            Log.e("PlatformRepository", "Backend RPC failed: ${e.message}", e)
+            // Allow local update for demo version
+        }
 
         val updatedUser = userItem.copy(balance = userItem.balance - match.entryFee)
         val updatedMatch = match.copy(joined = true, filledSlots = match.filledSlots + 1)
@@ -82,7 +101,20 @@ class PlatformRepository(private val db: AppDatabase) {
     }
 
     suspend fun addFunds(amount: Double) {
-        val userItem = user.firstOrNull() ?: return
+        val userItem = user.firstOrNull() ?: throw Exception("User info missing")
+        
+        try {
+            // SERVER-SIDE BACKEND LOGIC: Calling Postgres RPC on Supabase
+            // Performs atomical balance change & creates transaction log
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                SupabaseClient.client.postgrest.rpc("add_funds", AddFundsParams(amount))
+            }
+            Log.d("PlatformRepository", "Supabase RPC add_funds succeeded")
+        } catch (e: Throwable) {
+            Log.e("PlatformRepository", "Backend RPC failed: ${e.message}", e)
+            // Allow local update for demo version
+        }
+
         val updatedUser = userItem.copy(balance = userItem.balance + amount)
         val newTx = Transaction(type = "ADD_FUNDS", amount = amount, detail = "Added funds to Wallet via UPI", isPositive = true, timestamp = System.currentTimeMillis())
 
@@ -90,7 +122,7 @@ class PlatformRepository(private val db: AppDatabase) {
             db.userDao().update(updatedUser)
             db.transactionDao().insert(newTx)
         } catch (e: Throwable) {
-            Log.e("Room", "Failed to add funds", e)
+            Log.e("Room", "Failed to add funds locally", e)
         }
     }
 
@@ -98,6 +130,17 @@ class PlatformRepository(private val db: AppDatabase) {
         val userItem = user.firstOrNull() ?: return WithdrawResult.Failure("User info missing")
         if (amount <= 0) return WithdrawResult.Failure("Amount must be greater than zero")
         if (userItem.balance < amount) return WithdrawResult.Failure("Insufficient balance")
+
+        try {
+            // SERVER-SIDE LOGIC
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                SupabaseClient.client.postgrest.rpc("withdraw_funds", WithdrawFundsParams(amount))
+            }
+            Log.d("PlatformRepository", "Supabase RPC withdraw_funds succeeded")
+        } catch (e: Throwable) {
+            Log.e("PlatformRepository", "Backend RPC failed: ${e.message}", e)
+            // Allow local update for demo version
+        }
 
         val updatedUser = userItem.copy(balance = userItem.balance - amount)
         val newTx = Transaction(type = "WITHDRAWAL", amount = amount, detail = "Withdrawn to linked UPI / Bank Account", isPositive = false, timestamp = System.currentTimeMillis())
@@ -108,7 +151,7 @@ class PlatformRepository(private val db: AppDatabase) {
         } catch (e: Throwable) {
             Log.e("Room", "Withdraw failed", e)
         }
-        return WithdrawResult.Success("Withdrawal of ₹$amount initiated successfully. Funds will reflect in 4 hours!")
+        return WithdrawResult.Success("Withdrawal of VT $amount initiated successfully. Funds will reflect in 4 hours!")
     }
 
     suspend fun updateProfile(updatedUser: User) {
@@ -140,6 +183,17 @@ class PlatformRepository(private val db: AppDatabase) {
             sessionToken = sessionToken.ifEmpty { currentUser.sessionToken }
         ) ?: User(id = 0, username = username, phoneOrEmail = phoneOrEmail, balance = 500.0, avatarIdx = 2, passwordHash = passwordHash, sessionToken = sessionToken)
             
+        try {
+            // SERVER-SIDE LOGIC
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                SupabaseClient.client.postgrest.rpc("update_profile", UpdateProfileParams(username))
+            }
+            Log.d("PlatformRepository", "Supabase RPC update_profile succeeded")
+        } catch (e: Throwable) {
+            Log.e("PlatformRepository", "Backend RPC update_profile failed: ${e.message}", e)
+            // Do not throw here, allow login/registration to proceed locally.
+        }
+
         try {
             if (currentUser != null) {
                 db.userDao().update(newUser)

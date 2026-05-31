@@ -86,6 +86,13 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
+    private val _dbErrorDialog = MutableStateFlow<String?>(null)
+    val dbErrorDialog: StateFlow<String?> = _dbErrorDialog.asStateFlow()
+
+    fun clearDbError() {
+        _dbErrorDialog.value = null
+    }
+
     // Screen Loading/Swipe Refresh variables
     private val _isRefreshingHome = MutableStateFlow(false)
     val isRefreshingHome: StateFlow<Boolean> = _isRefreshingHome.asStateFlow()
@@ -99,15 +106,47 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
 
     private val prefs = application.getSharedPreferences("auth_prefs", android.content.Context.MODE_PRIVATE)
 
+    private fun checkLoginStreak() {
+        val lastLogin = prefs.getLong("last_login_time", 0L)
+        val currentStreak = prefs.getInt("login_streak", 0)
+        val now = System.currentTimeMillis()
+        val oneDayMillis = 24 * 60 * 60 * 1000L
+        val twoDaysMillis = 2 * oneDayMillis
+
+        val timeDiff = now - lastLogin
+        if (timeDiff in oneDayMillis..twoDaysMillis) {
+            // Consecutive day
+            val newStreak = currentStreak + 1
+            if (newStreak == 7) {
+                // 7th day: give 10 VT
+                addWalletFunds(10.0)
+                prefs.edit().putInt("login_streak", 0).putLong("last_login_time", now).apply()
+                viewModelScope.launch { _toastMessage.emit("Day 7 Login! You received 10 VT.") }
+            } else {
+                prefs.edit().putInt("login_streak", newStreak).putLong("last_login_time", now).apply()
+                viewModelScope.launch { _toastMessage.emit("Day $newStreak! Received Login Token.") }
+            }
+        } else if (timeDiff > twoDaysMillis || lastLogin == 0L) {
+            // Reset streak
+            prefs.edit().putInt("login_streak", 1).putLong("last_login_time", now).apply()
+            viewModelScope.launch { _toastMessage.emit("Day 1 Login! Received Login Token.") }
+        }
+    }
+
     init {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                repository.seedDatabase()
+                repository.fetchDataFromServer()
             }
             // Auto login using Supabase session or local prefs
-            val sessionCount = try { SupabaseClient.client.auth.currentSessionOrNull() != null } catch (e: Exception) { false }
+            val sessionCount = try {
+                withContext(Dispatchers.IO) {
+                    SupabaseClient.client.auth.currentSessionOrNull() != null
+                }
+            } catch (e: Exception) { false }
             if (sessionCount || prefs.getBoolean("is_logged_in", false)) {
                 _isLoggedIn.value = true
+                checkLoginStreak()
             }
         }
     }
@@ -121,7 +160,7 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _isRefreshingHome.value = true
             withContext(Dispatchers.IO) {
-                repository.seedDatabase()
+                repository.fetchDataFromServer()
             }
             _isRefreshingHome.value = false
             _toastMessage.emit("Tournaments & matches updated from database!")
@@ -132,7 +171,7 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _isRefreshingWallet.value = true
             withContext(Dispatchers.IO) {
-                repository.seedDatabase()
+                repository.fetchDataFromServer()
             }
             _isRefreshingWallet.value = false
             _toastMessage.emit("Wallet transactions synchronized.")
@@ -140,10 +179,10 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
     }
 
     // Login operations
-    fun login(phoneOrEmail: String, passwordHash: String, onComplete: () -> Unit = {}) {
+    fun login(phoneOrEmail: String, passwordHash: String, loginMethod: String = "email", onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             if (phoneOrEmail.isBlank() || passwordHash.isBlank()) {
-                _toastMessage.emit("Please enter valid Email and Password.")
+                _toastMessage.emit("Please enter valid identifier and Password.")
                 return@launch
             }
             if (phoneOrEmail.length > 100 || passwordHash.length > 100) {
@@ -153,12 +192,20 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             try {
                 withContext(Dispatchers.IO) {
                     try {
-                        SupabaseClient.client.auth.signInWith(Email) {
-                            email = phoneOrEmail
-                            password = passwordHash
+                        if (loginMethod == "email") {
+                            SupabaseClient.client.auth.signInWith(io.github.jan.supabase.gotrue.providers.builtin.Email) {
+                                email = phoneOrEmail
+                                password = passwordHash
+                            }
+                        } else {
+                            SupabaseClient.client.auth.signInWith(io.github.jan.supabase.gotrue.providers.builtin.Phone) {
+                                phone = phoneOrEmail
+                                password = passwordHash
+                            }
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("Auth", "Supabase sign in failed", e)
+                        android.util.Log.e("Auth", "Supabase sign in failed: ${e.message}", e)
+                        _dbErrorDialog.value = "Backend API Error: ${e.message}\n(Falling back to local demo login)"
                     }
                     val currentProfile = repository.user.firstOrNull()
                     val username = currentProfile?.username ?: "Warrior"
@@ -166,15 +213,16 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                 }
                 prefs.edit().putBoolean("is_logged_in", true).apply()
                 _isLoggedIn.value = true
+                checkLoginStreak()
                 _toastMessage.emit("Welcome back, Warrior!")
                 onComplete()
             } catch (e: Exception) {
-                _toastMessage.emit("Login Failed: ${e.message ?: "Unknown Error"}")
+                _dbErrorDialog.value = "Login Failed: ${e.message}"
             }
         }
     }
 
-    fun register(username: String, phoneOrEmail: String, passwordHash: String, onComplete: () -> Unit = {}) {
+    fun register(username: String, phoneOrEmail: String, passwordHash: String, loginMethod: String = "email", onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             if (username.isBlank() || phoneOrEmail.isBlank() || passwordHash.isBlank()) {
                 _toastMessage.emit("All fields are mandatory.")
@@ -187,21 +235,57 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             try {
                 withContext(Dispatchers.IO) {
                     try {
-                        SupabaseClient.client.auth.signUpWith(Email) {
-                            email = phoneOrEmail
-                            password = passwordHash
+                        if (loginMethod == "email") {
+                            SupabaseClient.client.auth.signUpWith(io.github.jan.supabase.gotrue.providers.builtin.Email) {
+                                email = phoneOrEmail
+                                password = passwordHash
+                            }
+                        } else {
+                            SupabaseClient.client.auth.signUpWith(io.github.jan.supabase.gotrue.providers.builtin.Phone) {
+                                phone = phoneOrEmail
+                                password = passwordHash
+                            }
                         }
                     } catch(e: Exception) {
-                        android.util.Log.e("Auth", "Supabase sign up failed", e)
+                        android.util.Log.e("Auth", "Supabase sign up failed: ${e.message}", e)
+                        _dbErrorDialog.value = "Backend API Error: ${e.message}\n(Falling back to local demo registration)"
                     }
                     repository.saveUserProfile(username, phoneOrEmail)
                 }
                 prefs.edit().putBoolean("is_logged_in", true).apply()
                 _isLoggedIn.value = true
+                checkLoginStreak()
                 _toastMessage.emit("Account created! Let the games begin.")
                 onComplete()
             } catch (e: Exception) {
-                _toastMessage.emit("Registration Failed: ${e.message ?: "Unknown Error"}")
+                _dbErrorDialog.value = "Registration Failed: ${e.message}"
+            }
+        }
+    }
+
+    fun loginWithGoogle(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    try {
+                        // For Android, standard SDK OAuth requires configuration. 
+                        // This might launch a browser or need redirect setup.
+                        SupabaseClient.client.auth.signInWith(io.github.jan.supabase.gotrue.providers.Google)
+                    } catch (e: Exception) {
+                        android.util.Log.e("Auth", "Supabase Google sign in failed: ${e.message}", e)
+                        _dbErrorDialog.value = "Backend API Error: ${e.message}\n(Falling back to local demo login)"
+                    }
+                    val currentProfile = repository.user.firstOrNull()
+                    val username = currentProfile?.username ?: "Google_Warrior"
+                    repository.saveUserProfile(username, "google_user@demo.com")
+                }
+                prefs.edit().putBoolean("is_logged_in", true).apply()
+                _isLoggedIn.value = true
+                checkLoginStreak()
+                _toastMessage.emit("Welcome back, Google Warrior!")
+                onComplete()
+            } catch (e: Exception) {
+                _dbErrorDialog.value = "Google Login Failed: ${e.message}"
             }
         }
     }
@@ -271,8 +355,12 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
     // Adding Funds
     fun addWalletFunds(amount: Double) {
         viewModelScope.launch {
-            repository.addFunds(amount)
-            _toastMessage.emit("Added ₹$amount successfully! Start dominating matches.")
+            try {
+                repository.addFunds(amount)
+                _toastMessage.emit("Added VT $amount successfully! Start dominating matches.")
+            } catch (e: Exception) {
+                _dbErrorDialog.value = "Backend RPC failed: ${e.message}"
+            }
         }
     }
 

@@ -58,7 +58,6 @@ fun LeaderboardScreen(viewModel: PlatformViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(DeepSpaceBlack)
             .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(bottom = 90.dp)
     ) {
@@ -223,7 +222,7 @@ fun PodiumColumn(
         Spacer(modifier = Modifier.height(2.dp))
 
         Text(
-            text = "₹${player.totalWinnings.toInt()}",
+            text = "VT ${player.totalWinnings.toInt()}",
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
             color = CyberpunkYellow
@@ -331,7 +330,7 @@ fun LeaderboardRow(player: LeaderboardPlayer) {
 
             // Total winnings
             Text(
-                text = "₹${player.totalWinnings.toInt()}",
+                text = "VT ${player.totalWinnings.toInt()}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Black,
                 color = CyberpunkYellow

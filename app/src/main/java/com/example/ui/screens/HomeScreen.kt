@@ -67,6 +67,9 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextGray
 import com.example.ui.viewmodel.PlatformViewModel
 
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.shape.CircleShape
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -100,7 +103,6 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DeepSpaceBlack)
     ) {
         LazyColumn(
             modifier = Modifier
@@ -186,7 +188,7 @@ fun HomeScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "₹${user?.balance?.toInt() ?: 0}",
+                            text = "VT ${user?.balance?.toInt() ?: 0}",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
@@ -222,7 +224,7 @@ fun HomeScreen(
                     val banners = listOf(
                         BannerItem(
                             title = "Mega BGMI Clash at 8 PM",
-                            prize = "₹10,000",
+                            prize = "VT 10,000",
                             tag = "SPECIAL",
                             backgroundGradient = Brush.linearGradient(
                                 colors = listOf(Color(0xFFEE2B4B), Color(0xFFA1102A))
@@ -231,7 +233,7 @@ fun HomeScreen(
                         ),
                         BannerItem(
                             title = "Free Fire Pro Squad Battle",
-                            prize = "₹5,000",
+                            prize = "VT 5,000",
                             tag = "FREE ENTRY",
                             backgroundGradient = Brush.linearGradient(
                                 colors = listOf(Color(0xFF333333), Color(0xFF111111))
@@ -240,7 +242,7 @@ fun HomeScreen(
                         ),
                         BannerItem(
                             title = "Weekend Sniper Only Arena",
-                            prize = "₹2,500",
+                            prize = "VT 2,500",
                             tag = "SOLO",
                             backgroundGradient = Brush.linearGradient(
                                 colors = listOf(Color(0xFFEE2B4B), Color(0xFF111111))
@@ -465,12 +467,22 @@ fun HomeScreen(
                 }
             } else {
                 items(filteredTournaments) { match ->
+                    val gameThumbnailUrl = if (match.game.contains("BGMI", true)) {
+                        "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80"
+                    } else {
+                        "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=800&q=80"
+                    }
+                    
                     TournamentCard(
-                        match = match,
+                        thumbnailUrl = gameThumbnailUrl,
+                        title = match.title,
+                        entryFee = match.entryFee,
+                        prizePool = match.prizePool,
+                        filledSlots = match.filledSlots,
+                        maxSlots = match.maxSlots,
+                        isJoined = match.joined,
                         onClick = { onNavigateToTournament(match.id) },
-                        onJoinClick = {
-                            viewModel.registerForTournament(match.id)
-                        }
+                        onJoinClick = { viewModel.registerForTournament(match.id) }
                     )
                 }
             }

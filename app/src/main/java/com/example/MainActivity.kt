@@ -15,6 +15,12 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.*
 import androidx.navigation.navDeepLink
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.repository.PlatformRepository
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
@@ -41,7 +48,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyApplicationTheme {
                 val context = LocalContext.current
+                val dbError by viewModel.dbErrorDialog.collectAsStateWithLifecycle()
                 var currentTabState by remember { mutableStateOf("home") }
+
+                if (dbError != null) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { viewModel.clearDbError() },
+                        title = { androidx.compose.material3.Text("Supabase Backend Error") },
+                        text = { androidx.compose.material3.Text(dbError!!) },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = { viewModel.clearDbError() }) {
+                                androidx.compose.material3.Text("OK")
+                            }
+                        }
+                    )
+                }
 
                 // Live Toast collector for instant actions feedback
                 LaunchedEffect(Unit) {
@@ -52,15 +73,31 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
-                NavHost(
-                    navController = navController,
-                    startDestination = "splash",
-                    modifier = Modifier.fillMaxSize(),
-                    enterTransition = { androidx.compose.animation.fadeIn() },
-                    exitTransition = { androidx.compose.animation.fadeOut() },
-                    popEnterTransition = { androidx.compose.animation.fadeIn() },
-                    popExitTransition = { androidx.compose.animation.fadeOut() }
-                ) {
+                // Global Background with glowing liquid glass orbs
+                Box(modifier = Modifier.fillMaxSize().background(com.example.ui.theme.DeepSpaceBlack)) {
+                    Box(modifier = Modifier
+                        .offset(x = (-80).dp, y = (-20).dp)
+                        .size(350.dp)
+                        .background(com.example.ui.theme.ElectricBlue.copy(alpha = 0.15f), shape = androidx.compose.foundation.shape.CircleShape)
+                        .blur(100.dp)
+                    )
+                    Box(modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 100.dp, y = 50.dp)
+                        .size(400.dp)
+                        .background(com.example.ui.theme.CyberpunkYellow.copy(alpha = 0.12f), shape = androidx.compose.foundation.shape.CircleShape)
+                        .blur(120.dp)
+                    )
+
+                    NavHost(
+                        navController = navController,
+                        startDestination = "splash",
+                        modifier = Modifier.fillMaxSize(),
+                        enterTransition = { androidx.compose.animation.fadeIn() },
+                        exitTransition = { androidx.compose.animation.fadeOut() },
+                        popEnterTransition = { androidx.compose.animation.fadeIn() },
+                        popExitTransition = { androidx.compose.animation.fadeOut() }
+                    ) {
                     // 1. SPLASH INTRO PORTAL
                     composable("splash") {
                         SplashScreen(
@@ -283,6 +320,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+                } // End of Global Box
             }
         }
     }

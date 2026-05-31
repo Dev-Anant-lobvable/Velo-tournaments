@@ -55,7 +55,7 @@ fun SplashScreen(
 
     LaunchedEffect(key1 = true) {
         delay(2600) // loading delay
-        if (isLoggedIn) {
+        if (viewModel.isLoggedIn.value) {
             onNavigateToHome()
         } else {
             onNavigateToAuth()

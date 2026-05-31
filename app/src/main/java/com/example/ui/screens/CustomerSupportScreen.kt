@@ -17,8 +17,7 @@ import com.example.ui.theme.CyberpunkYellow
 fun CustomerSupportScreen(viewModel: com.example.ui.viewmodel.PlatformViewModel) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(DeepSpaceBlack),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

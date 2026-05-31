@@ -58,12 +58,44 @@ fun WalletScreen(viewModel: PlatformViewModel) {
     var showReceiptDialog by remember { mutableStateOf(false) }
     var lastWithdrawnAmount by remember { mutableStateOf("") }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var pendingAmount by remember { mutableStateOf(0.0) }
+    val upiLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val dataString = result.data?.getStringExtra("response") ?: ""
+        val isSuccess = dataString.contains("Status=SUCCESS", ignoreCase = true)
+
+        if (result.resultCode == android.app.Activity.RESULT_OK && isSuccess) {
+            if (pendingAmount > 0) {
+                viewModel.addWalletFunds(pendingAmount)
+                android.widget.Toast.makeText(context, "Payment Successful: VT $pendingAmount added", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            android.widget.Toast.makeText(context, "Payment failed or cancelled.", android.widget.Toast.LENGTH_SHORT).show()
+        }
+        pendingAmount = 0.0
+    }
+    
+    val launchUpiPayment = { amount: Double ->
+        pendingAmount = amount
+        val tr = System.currentTimeMillis().toString()
+        val uri = android.net.Uri.parse("upi://pay?pa=velorix@ybl&pn=VeloRix+Esports&mc=5411&tr=$tr&tn=Wallet+Topup&am=$amount&cu=INR")
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+        val chooser = android.content.Intent.createChooser(intent, "Pay with UPI")
+        try {
+            upiLauncher.launch(chooser)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "No UPI app found. Please install a UPI app to add funds.", android.widget.Toast.LENGTH_LONG).show()
+            pendingAmount = 0.0
+        }
+    }
+
     val presetAmounts = listOf(50.0, 100.0, 200.0, 500.0)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DeepSpaceBlack)
     ) {
         LazyColumn(
             modifier = Modifier
@@ -139,7 +171,7 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "₹${user?.balance?.toInt() ?: 0}",
+                                    text = "VT ${user?.balance?.toInt() ?: 0}",
                                     fontSize = 36.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
@@ -184,14 +216,14 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 24.dp),
+                        .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     presetAmounts.forEach { amount ->
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { viewModel.addWalletFunds(amount) }
+                                .clickable { launchUpiPayment(amount) }
                                 .testTag("add_funds_preset_${amount.toInt()}"),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF161622)),
                             shape = RoundedCornerShape(16.dp),
@@ -212,13 +244,64 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "₹${amount.toInt()}",
+                                    text = "VT ${amount.toInt()}",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
                                 )
                             }
                         }
+                    }
+                }
+                
+                // Custom Amount Input
+                var customAmount by remember { mutableStateOf("") }
+                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = customAmount,
+                        onValueChange = { customAmount = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("custom_add_funds_input"),
+                        label = { Text("Custom Amount (VT)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyberpunkYellow,
+                            unfocusedBorderColor = Color(0xFF333333),
+                            focusedLabelColor = CyberpunkYellow,
+                            unfocusedLabelColor = TextGray,
+                            focusedContainerColor = Color(0xFF0D0D12),
+                            unfocusedContainerColor = Color(0xFF0D0D12),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    Button(
+                        onClick = {
+                            val amt = customAmount.toDoubleOrNull() ?: 0.0
+                            if (amt > 0) {
+                                launchUpiPayment(amt)
+                                customAmount = ""
+                            }
+                        },
+                        modifier = Modifier
+                            .height(56.dp)
+                            .testTag("custom_add_funds_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = CyberpunkYellow)
+                    ) {
+                        Text("ADD", color = DeepSpaceBlack, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -315,7 +398,7 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("withdraw_amount_input"),
-                            label = { Text("Amount (₹)") },
+                            label = { Text("Amount (VT)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -362,7 +445,6 @@ fun WalletScreen(viewModel: PlatformViewModel) {
         }
 
         if (showReceiptDialog) {
-            val context = androidx.compose.ui.platform.LocalContext.current
             AlertDialog(
                 onDismissRequest = { showReceiptDialog = false },
                 title = {
@@ -383,19 +465,19 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                         )
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Amount Withdrawn:", color = Color.Gray, fontSize = 14.sp)
-                            Text("₹$lastWithdrawnAmount", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("VT $lastWithdrawnAmount", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Platform Fee:", color = Color.Gray, fontSize = 14.sp)
-                            Text("₹0.00", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("VT 0.00", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         HorizontalDivider(color = Color.DarkGray)
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Total Sent:", color = Color.Gray, fontSize = 14.sp)
-                            Text("₹$lastWithdrawnAmount", color = NeonGreen, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text("VT $lastWithdrawnAmount", color = NeonGreen, fontWeight = FontWeight.Black, fontSize = 14.sp)
                         }
                     }
                 },
@@ -404,7 +486,7 @@ fun WalletScreen(viewModel: PlatformViewModel) {
                         onClick = { 
                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(android.content.Intent.EXTRA_TEXT, "I just successfully withdrew ₹$lastWithdrawnAmount from my Velorix Wallet!")
+                                putExtra(android.content.Intent.EXTRA_TEXT, "I just successfully withdrew VT $lastWithdrawnAmount from my Velorix Wallet!")
                             }
                             context.startActivity(android.content.Intent.createChooser(intent, "Share Receipt"))
                         },
@@ -485,7 +567,7 @@ fun TransactionRow(tx: Transaction) {
             // Positive/negative green red amount display
             val prefix = if (tx.isPositive) "+" else "-"
             Text(
-                text = "$prefix ₹${tx.amount.toInt()}",
+                text = "$prefix VT ${tx.amount.toInt()}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Black,
                 color = if (tx.isPositive) NeonGreen else NeonRed

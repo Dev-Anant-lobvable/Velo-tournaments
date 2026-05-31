@@ -299,7 +299,7 @@ fun ProfileScreen(
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("WALLET", color = Color.Gray, fontSize = 12.sp)
-                            Text("₹${currentUser.balance}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("VT ${currentUser.balance}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 

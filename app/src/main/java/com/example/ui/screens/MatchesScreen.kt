@@ -48,7 +48,6 @@ fun MatchesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DeepSpaceBlack)
             .padding(horizontal = 16.dp)
     ) {
         // App Header Title
@@ -146,7 +145,7 @@ fun MatchesScreen(
                     game = "BGMI",
                     date = "Yesterday",
                     rank = "#2 Out of 100",
-                    reward = "₹250",
+                    reward = "VT 250",
                     kills = 12
                 ),
                 CompletedMatchItem(
@@ -154,7 +153,7 @@ fun MatchesScreen(
                     game = "Free Fire",
                     date = "Last Sunday",
                     rank = "#45 Out of 50",
-                    reward = "₹0",
+                    reward = "VT 0",
                     kills = 1
                 ),
                 CompletedMatchItem(
@@ -162,7 +161,7 @@ fun MatchesScreen(
                     game = "BGMI",
                     date = "9 May 2026",
                     rank = "#1 Winner!",
-                    reward = "₹500",
+                    reward = "VT 500",
                     kills = 15
                 )
             )
@@ -287,7 +286,7 @@ fun UpcomingJoinedRow(match: Tournament, onClick: () -> Unit) {
 
 @Composable
 fun CompletedRow(match: CompletedMatchItem) {
-    val isWin = !match.reward.contains("₹0")
+    val isWin = !match.reward.contains("VT 0")
 
     Card(
         modifier = Modifier

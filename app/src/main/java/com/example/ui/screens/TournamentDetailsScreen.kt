@@ -90,7 +90,6 @@ fun TournamentDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DeepSpaceBlack)
     ) {
         match?.let { t ->
             Column(
@@ -202,7 +201,7 @@ fun TournamentDetailsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "₹${t.prizePool.toInt()}",
+                                text = "VT ${t.prizePool.toInt()}",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Black,
                                 color = CyberpunkYellow
@@ -279,7 +278,7 @@ fun TournamentDetailsScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (t.entryFee == 0.0) "FREE" else "₹${t.entryFee.toInt()}",
+                            text = if (t.entryFee == 0.0) "FREE" else "VT ${t.entryFee.toInt()}",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black,
                             color = ElectricBlue
@@ -504,7 +503,7 @@ fun PrizePoolTabContent(match: Tournament) {
                 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = "TOTAL", fontSize = 10.sp, color = TextGray, fontWeight = FontWeight.Bold)
-                    Text(text = "₹${match.prizePool.toInt()}", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Black)
+                    Text(text = "VT ${match.prizePool.toInt()}", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Black)
                 }
             }
 
@@ -541,7 +540,7 @@ fun PrizePoolTabContent(match: Tournament) {
                     }
 
                     Text(
-                        text = "₹${p.amount.toInt()}",
+                        text = "VT ${p.amount.toInt()}",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
                         color = CyberpunkYellow
